@@ -1,0 +1,44 @@
+# Config file for Snowboard Kids 2 NTSC 1.1 Recompilation.
+[input]
+entrypoint = 0x80000400
+# Paths are relative to the location of this config file.
+# elf_path = "snowboardkids2.elf"
+symbols_file_path = "snowboardkids-recomp-syms/dump.toml"
+rom_file_path = "snowboardkids.z64"
+output_func_path = "RecompiledFuncs"
+
+[patches]
+stubs = [
+#    "RdRam_CheckIPL3"
+]
+
+ignored = [
+    "cutsceneCmdHelper",
+    "renderCutsceneSlotMenu",
+    "renderCutsceneTimelineView",
+    "gspS2DEX_fifoTextStart",
+    "aspMainTextStart"
+]
+
+renamed = [
+]
+
+# nuking osInvalDCache & osInvalICache calls so they don't get recompiled since they're absent from the symbols file
+[[patches.instruction]]
+func = "dmaLoadAndInvalidate"
+vram = 0x8003BCC4
+value = 0x00000000 # nop
+[[patches.instruction]]
+func = "dmaLoadAndInvalidate"
+vram = 0x8003BCB8
+value = 0x00000000 # nop
+
+[[patches.instruction]]
+func = "piDmaHandlerThread"
+vram = 0x8003B708
+value = 0x00000000 # nop
+
+[[patches.instruction]]
+func = "piDmaHandlerThread"
+vram = 0x8003B79C
+value = 0x00000000 # nop

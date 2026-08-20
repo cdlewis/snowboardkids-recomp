@@ -1,0 +1,3 @@
+[submodule "lib/recomp-theme"]
+	path = lib/recomp-theme
+	url = https://github.com/cdlewis/snowboardkids-recomp-theme.git
