@@ -11,9 +11,12 @@
 # Output C files
 RecompiledFuncs/
 RecompiledPatches/
+rsp/aspMain.cpp
 
 # Mac / Linux build output
-build*
+# Directory-only so that BUILDING.md is not swallowed by this rule on
+# case-insensitive filesystems.
+build*/
 *.o
 .cache
 
@@ -23,9 +26,6 @@ build*
 *.lib
 *.pdb
 
-# Data dumps
-data_dump.toml
-dump.toml
 
 # Local backups
 backups
@@ -72,7 +72,8 @@ RSPRecomp
 # Controller mappings file
 gamecontrollerdb.txt
 
-# audio data
-patches/audio_jp
-patches/audio_us
-patches/audio_eu
+# Patch build output
+patches/*.o
+patches/*.d
+patches/patches.bin
+patches/patches.map

@@ -1,0 +1,3 @@
+#pragma once
+
+inline constexpr char sk1_game_version[] = "@SK1_GAME_VERSION@";

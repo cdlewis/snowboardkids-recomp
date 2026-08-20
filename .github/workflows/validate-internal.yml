@@ -1,0 +1,17 @@
+name: validate-internal
+
+# Temporarily disable automatic workflow runs to conserve Actions quota.
+# Restore the push and pull_request triggers below when CI automation should resume.
+on:
+  workflow_dispatch:
+#  push:
+#    branches:
+#      - main
+#  pull_request:
+#    types: [opened, synchronize]
+
+jobs:
+  build:
+    if: github.event_name == 'push' || github.repository == github.event.pull_request.head.repo.full_name
+    uses: ./.github/workflows/validate.yml
+    secrets: inherit

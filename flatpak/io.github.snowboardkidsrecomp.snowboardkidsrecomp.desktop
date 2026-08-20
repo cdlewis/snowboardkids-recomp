@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Snowboard Kids: Recompiled
+Exec=/app/bin/SnowboardKidsRecompiled
+Type=Application
+Icon=io.github.snowboardkidsrecomp.snowboardkidsrecomp
+Categories=Game;
+Comment=Static recompilation of Snowboard Kids for PC.
+MimeType=x-scheme-handler/snowboardkidsrecomp

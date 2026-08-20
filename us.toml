@@ -1,44 +1,26 @@
-# Config file for Snowboard Kids 2 NTSC 1.1 Recompilation.
+# Config file for the Snowboard Kids (USA) Recompilation.
 [input]
 entrypoint = 0x80000400
 # Paths are relative to the location of this config file.
-# elf_path = "snowboardkids2.elf"
 symbols_file_path = "snowboardkids-recomp-syms/dump.toml"
 rom_file_path = "snowboardkids.z64"
 output_func_path = "RecompiledFuncs"
 
 [patches]
 stubs = [
-#    "RdRam_CheckIPL3"
 ]
 
+# Microcode blobs. These are data, but the symbol table types them as functions,
+# so the recompiler would otherwise try to translate them as MIPS.
+# (rspbootTextStart is already in N64Recomp's built-in ignore list, as are
+# osInvalDCache/osInvalICache, so they must not be repeated here.)
 ignored = [
-    "cutsceneCmdHelper",
-    "renderCutsceneSlotMenu",
-    "renderCutsceneTimelineView",
-    "gspS2DEX_fifoTextStart",
-    "aspMainTextStart"
+    "aspMainTextStart",
+    "gspF3DLX_fifoTextStart",
 ]
 
+# The decompilation names the game's entry function "main", which C reserves.
+# N64Recomp appends "_recomp" to anything listed here.
 renamed = [
+    "main",
 ]
-
-# nuking osInvalDCache & osInvalICache calls so they don't get recompiled since they're absent from the symbols file
-[[patches.instruction]]
-func = "dmaLoadAndInvalidate"
-vram = 0x8003BCC4
-value = 0x00000000 # nop
-[[patches.instruction]]
-func = "dmaLoadAndInvalidate"
-vram = 0x8003BCB8
-value = 0x00000000 # nop
-
-[[patches.instruction]]
-func = "piDmaHandlerThread"
-vram = 0x8003B708
-value = 0x00000000 # nop
-
-[[patches.instruction]]
-func = "piDmaHandlerThread"
-vram = 0x8003B79C
-value = 0x00000000 # nop

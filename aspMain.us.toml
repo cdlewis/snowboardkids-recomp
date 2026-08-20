@@ -1,0 +1,26 @@
+# Audio microcode (aspMain) for Snowboard Kids (USA).
+# Derived from the decompilation symbols:
+#   aspMainTextStart = 0x800B0EA0, aspMainTextEnd = 0x800B1CC0  (size 0xE20)
+# ROM offset = vram - 0x7FFFF400 (.main is vram 0x80000450 at rom 0x1050).
+text_offset = 0xB1AA0
+text_size = 0xE20
+text_address = 0x04001080
+rom_file_path = "snowboardkids.z64"
+output_file_path = "rsp/aspMain.cpp"
+output_function_name = "aspMain"
+
+# RSPRecomp resolves 14 jump-table targets on its own; these are the remaining
+# ones it cannot see. The aspMain microcode in this ROM is byte-for-byte identical
+# to the one in Snowboard Kids 2 (compare rom 0xB1AA0 here against rom 0x852C0
+# there, 0xE20 bytes), so this is that project's verified list rather than a guess.
+# Without it the audio task aborts with RspExitReason::UnhandledJumpTarget on boot.
+extra_indirect_branch_targets = [
+    0x1118, 0x1470,
+    0x11DC, 0x1B38,
+    0x1214, 0x187C,
+    0x1254, 0x12D0,
+    0x12EC, 0x1328,
+    0x140C, 0x1294,
+    0x1E24, 0x138C,
+    0x170C, 0x144C
+]

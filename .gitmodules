@@ -1,3 +1,24 @@
+[submodule "lib/N64ModernRuntime"]
+	path = lib/N64ModernRuntime
+	url = https://github.com/cdlewis/N64ModernRuntime.git
+[submodule "lib/rt64"]
+	path = lib/rt64
+	url = https://github.com/cdlewis/rt64.git
+[submodule "lib/RecompFrontend"]
+	path = lib/RecompFrontend
+	url = https://github.com/cdlewis/RecompFrontend
+[submodule "lib/sse2neon"]
+	path = lib/sse2neon
+	url = https://github.com/DLTcollab/sse2neon.git
+[submodule "lib/freetype-windows-binaries"]
+	path = lib/freetype-windows-binaries
+	url = https://github.com/ubawurinna/freetype-windows-binaries.git
+[submodule "lib/sk1-decomp"]
+	path = lib/sk1-decomp
+	url = https://github.com/cdlewis/snowboardkids-decomp.git
+[submodule "snowboardkids-recomp-syms"]
+	path = snowboardkids-recomp-syms
+	url = https://github.com/cdlewis/snowboardkids-recomp-syms.git
 [submodule "lib/recomp-theme"]
 	path = lib/recomp-theme
 	url = https://github.com/cdlewis/snowboardkids-recomp-theme.git

@@ -1,0 +1,619 @@
+# TODO: this workflow cannot pass until the private baserom repository exists.
+#
+# It needs:
+#
+#   - a private repo `cdlewis/snowboardkids-private` (read via PRIVATE_REPO_ACCESS)
+#     containing `snowboardkids.z64.gpg`
+#   - BASEROM_KEY, the passphrase for it
+#
+# The symbol dumps come from the snowboardkids-recomp-syms submodule, so the
+# decompilation ELF is not needed here.
+
+name: validate
+
+on:
+  workflow_call:
+    inputs:
+      SDL2_VERSION:
+        type: string
+        required: false
+        default: '2.30.3'
+      N64RECOMP_COMMIT:
+        type: string
+        required: false
+        default: '81213c1831fab2521a6a5459c67b63437d67e253'
+      BUILD_TYPES:
+        type: string
+        required: false
+        default: '["Debug","Release"]'
+      WINDOWS_BUILD_TYPES:
+        type: string
+        required: false
+        default: '["Debug","RelWithDebInfo"]'
+      PLATFORMS:
+        type: string
+        required: false
+        default: '["linux","linux-arm64","linux-flatpak","windows","macos"]'
+      GAME_VERSION:
+        type: string
+        required: false
+        default: ''
+    secrets:
+      PRIVATE_REPO_ACCESS:
+        required: true
+      BASEROM_KEY:
+        required: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  resolve_version:
+    runs-on: ubuntu-latest
+    outputs:
+      game_version: ${{ steps.resolve.outputs.game_version }}
+    steps:
+      - name: Checkout
+        if: inputs.GAME_VERSION == ''
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
+          fetch-depth: 0
+          submodules: false
+
+      - name: Resolve Game Version
+        id: resolve
+        shell: bash
+        env:
+          REQUESTED_VERSION: ${{ inputs.GAME_VERSION }}
+        run: |
+          version="$REQUESTED_VERSION"
+          version="${version#v}"
+
+          if [ -z "$version" ]; then
+            while IFS= read -r tag; do
+              if [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                version="${tag#v}+$(git rev-parse HEAD | tail -c 5)"
+                break
+              fi
+            done < <(git tag --merged HEAD --sort=-version:refname)
+          fi
+
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]; then
+            printf 'Invalid or unresolved game version: %s\n' "$version" >&2
+            exit 1
+          fi
+
+          printf 'game_version=%s\n' "$version" >> "$GITHUB_OUTPUT"
+          printf 'Snowboard Kids game version: %s\n' "$version"
+
+  build-linux:
+    needs: resolve_version
+    if: ${{ contains(fromJSON(inputs.PLATFORMS), 'linux') }}
+    runs-on: ubuntu-22.04
+    env:
+      GAME_VERSION: ${{ needs.resolve_version.outputs.game_version }}
+    strategy:
+      matrix:
+        type: ${{ fromJSON(inputs.BUILD_TYPES) }}
+        os: [ubuntu-22.04]
+    name: ubuntu-22.04 (x64, ${{ matrix.type }}, Native, AppImage)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
+          submodules: false
+
+      - name: Checkout submodules
+        run: |
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
+          git submodule sync --recursive
+          git submodule update --init --recursive
+
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ matrix.os }}-sk1re-ccache-${{ matrix.type }}-x64-${{ inputs.N64RECOMP_COMMIT }}
+
+      - name: Install Linux Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libsdl2-dev libgtk-3-dev lld llvm clang-15 libfuse2
+
+          echo ::group::install SDL2
+          export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
+          wget https://github.com/libsdl-org/SDL/releases/download/release-${{ inputs.SDL2_VERSION }}/SDL2-${{ inputs.SDL2_VERSION }}.tar.gz
+          tar -xzf SDL2-${{ inputs.SDL2_VERSION }}.tar.gz
+          cd SDL2-${{ inputs.SDL2_VERSION }}
+          ./configure
+          make -j 10
+          sudo make install
+          sudo cp -av /usr/local/lib/libSDL* /lib/x86_64-linux-gnu/
+          echo ::endgroup::
+
+      - name: Checkout baserom
+        uses: actions/checkout@v4
+        with:
+          repository: cdlewis/snowboardkids-private
+          token: ${{ secrets.PRIVATE_REPO_ACCESS }}
+          path: baserom
+
+      - name: Decrypt baserom
+        run: |
+          gpg --quiet --batch --yes --decrypt --passphrase "$BASEROM_KEY" --output snowboardkids.z64 snowboardkids.z64.gpg
+        env:
+          BASEROM_KEY: ${{ secrets.BASEROM_KEY }}
+        working-directory: baserom
+
+      - name: Prepare Build
+        run: cp baserom/snowboardkids.z64 ./
+
+      - name: Build N64Recomp and RSPRecomp
+        run: |
+          git clone https://github.com/Mr-Wiseguy/N64Recomp.git --recurse-submodules N64RecompSource
+          cd N64RecompSource
+          git checkout ${{ inputs.N64RECOMP_COMMIT }}
+          git submodule update --init --recursive
+
+          export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
+          cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER=g++-11 -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_MAKE_PROGRAM=ninja -G Ninja -S . -B cmake-build
+          cmake --build cmake-build --config Release --target N64RecompCLI -j $(nproc)
+          cmake --build cmake-build --config Release --target RSPRecomp -j $(nproc)
+
+          cp cmake-build/N64Recomp ..
+          cp cmake-build/RSPRecomp ..
+
+      - name: Run N64Recomp and RSPRecomp
+        run: |
+          ./N64Recomp us.toml
+          ./RSPRecomp aspMain.us.toml
+
+      - name: Build SnowboardKidsRecomp
+        run: |
+          export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
+          cmake -DCMAKE_BUILD_TYPE=${{ matrix.type }} -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER=clang++-15 -DCMAKE_C_COMPILER=clang-15 -DCMAKE_MAKE_PROGRAM=ninja -G Ninja -S . -B cmake-build
+          cmake --build cmake-build --config ${{ matrix.type }} --target SnowboardKidsRecompiled -j $(nproc)
+
+      - name: Prepare Archive
+        run: |
+          cmake -DOUTPUT_DIR=cmake-build/assets -P scripts/stage-assets.cmake
+          cp recompcontrollerdb.txt cmake-build/
+          tar -czf SnowboardKidsRecompiled.tar.gz -C cmake-build SnowboardKidsRecompiled assets/ recompcontrollerdb.txt
+
+      - name: Archive SnowboardKidsRecomp
+        uses: actions/upload-artifact@v4
+        with:
+          name: SnowboardKidsRecompiled-${{ runner.os }}-X64-${{ matrix.type }}
+          path: SnowboardKidsRecompiled.tar.gz
+
+      - name: Build AppImage
+        run: bash .github/linux/appimage.sh
+
+      - name: SnowboardKidsRecomp AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: SnowboardKidsRecompiled-AppImage-X64-${{ matrix.type }}
+          path: SnowboardKidsRecompiled-*.AppImage
+
+  build-linux-flatpak:
+    needs: resolve_version
+    if: ${{ contains(fromJSON(inputs.PLATFORMS), 'linux-flatpak') }}
+    runs-on: ubuntu-latest
+    env:
+      GAME_VERSION: ${{ needs.resolve_version.outputs.game_version }}
+      FLATPAK_ID: io.github.snowboardkidsrecomp.snowboardkidsrecomp
+      FREEDESKTOP_VERSION: 25.08
+      LLVM_VERSION: 20
+    strategy:
+      matrix:
+        type: ${{ fromJSON(inputs.BUILD_TYPES) }}
+        os: [ubuntu-latest]
+    name: ${{ matrix.os }} (x64, ${{ matrix.type }}, Flatpak)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
+          submodules: false
+
+      - name: Checkout submodules
+        run: |
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
+          git submodule sync --recursive
+          git submodule update --init --recursive
+
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ matrix.os }}-sk1re-ccache-${{ matrix.type }}-x64-${{ inputs.N64RECOMP_COMMIT }}
+
+      - name: Install Linux Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak-builder ccache lld
+
+      - name: Checkout baserom
+        uses: actions/checkout@v4
+        with:
+          repository: cdlewis/snowboardkids-private
+          token: ${{ secrets.PRIVATE_REPO_ACCESS }}
+          path: baserom
+
+      - name: Decrypt baserom
+        run: |
+          gpg --quiet --batch --yes --decrypt --passphrase "$BASEROM_KEY" --output snowboardkids.z64 snowboardkids.z64.gpg
+        env:
+          BASEROM_KEY: ${{ secrets.BASEROM_KEY }}
+        working-directory: baserom
+
+      - name: Prepare Build
+        run: cp baserom/snowboardkids.z64 ./
+
+      - name: Prepare Flatpak
+        run: |
+          flatpak --user remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          flatpak --user install -y flathub org.freedesktop.Sdk//${{ env.FREEDESKTOP_VERSION }}
+          flatpak --user install -y flathub org.freedesktop.Sdk.Extension.llvm${{ env.LLVM_VERSION }}//${{ env.FREEDESKTOP_VERSION }}
+
+      - name: Build SnowboardKidsRecomp
+        run: |
+          export CCACHE_DIR=/tmp/ccache
+          git config --global protocol.file.allow always
+          make -C patches CC=clang LD=ld.lld
+          flatpak-builder --user --force-clean --install-deps-from=flathub --repo=repo --ccache builddir ./flatpak/${{ env.FLATPAK_ID }}.json
+          flatpak build-bundle repo ./${{ env.FLATPAK_ID }}.flatpak ${{ env.FLATPAK_ID }} --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SnowboardKidsRecompiled-Flatpak-X64-${{ matrix.type }}
+          path: ./${{ env.FLATPAK_ID }}.flatpak
+
+  build-linux-arm64:
+    needs: resolve_version
+    if: ${{ contains(fromJSON(inputs.PLATFORMS), 'linux-arm64') }}
+    runs-on: ubuntu-22.04-arm
+    env:
+      GAME_VERSION: ${{ needs.resolve_version.outputs.game_version }}
+    strategy:
+      matrix:
+        type: ${{ fromJSON(inputs.BUILD_TYPES) }}
+        os: [ubuntu-22.04]
+    name: ubuntu-22.04 (arm64, ${{ matrix.type }}, Native, AppImage)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
+          submodules: false
+
+      - name: Checkout submodules
+        run: |
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
+          git submodule sync --recursive
+          git submodule update --init --recursive
+
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ matrix.os }}-sk1re-ccache-${{ matrix.type }}-arm64-${{ inputs.N64RECOMP_COMMIT }}
+
+      - name: Install Linux Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libsdl2-dev libgtk-3-dev lld llvm clang-15 libfuse2
+
+          echo ::group::install SDL2
+          export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
+          wget https://github.com/libsdl-org/SDL/releases/download/release-${{ inputs.SDL2_VERSION }}/SDL2-${{ inputs.SDL2_VERSION }}.tar.gz
+          tar -xzf SDL2-${{ inputs.SDL2_VERSION }}.tar.gz
+          cd SDL2-${{ inputs.SDL2_VERSION }}
+          ./configure
+          make -j 10
+          sudo make install
+          sudo cp -av /usr/local/lib/libSDL* /lib/aarch64-linux-gnu/
+          echo ::endgroup::
+
+      - name: Checkout baserom
+        uses: actions/checkout@v4
+        with:
+          repository: cdlewis/snowboardkids-private
+          token: ${{ secrets.PRIVATE_REPO_ACCESS }}
+          path: baserom
+
+      - name: Decrypt baserom
+        run: |
+          gpg --quiet --batch --yes --decrypt --passphrase "$BASEROM_KEY" --output snowboardkids.z64 snowboardkids.z64.gpg
+        env:
+          BASEROM_KEY: ${{ secrets.BASEROM_KEY }}
+        working-directory: baserom
+
+      - name: Prepare Build
+        run: cp baserom/snowboardkids.z64 ./
+
+      - name: Build N64Recomp and RSPRecomp
+        run: |
+          git clone https://github.com/Mr-Wiseguy/N64Recomp.git --recurse-submodules N64RecompSource
+          cd N64RecompSource
+          git checkout ${{ inputs.N64RECOMP_COMMIT }}
+          git submodule update --init --recursive
+
+          export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
+          cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER=g++-11 -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_MAKE_PROGRAM=ninja -G Ninja -S . -B cmake-build
+          cmake --build cmake-build --config Release --target N64RecompCLI -j $(nproc)
+          cmake --build cmake-build --config Release --target RSPRecomp -j $(nproc)
+
+          cp cmake-build/N64Recomp ..
+          cp cmake-build/RSPRecomp ..
+
+      - name: Run N64Recomp and RSPRecomp
+        run: |
+          ./N64Recomp us.toml
+          ./RSPRecomp aspMain.us.toml
+
+      - name: Build SnowboardKidsRecomp
+        run: |
+          export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
+          cmake -DCMAKE_BUILD_TYPE=${{ matrix.type }} -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER=clang++-15 -DCMAKE_C_COMPILER=clang-15 -DCMAKE_MAKE_PROGRAM=ninja -G Ninja -S . -B cmake-build
+          cmake --build cmake-build --config ${{ matrix.type }} --target SnowboardKidsRecompiled -j $(nproc)
+
+      - name: Prepare Archive
+        run: |
+          cmake -DOUTPUT_DIR=cmake-build/assets -P scripts/stage-assets.cmake
+          cp recompcontrollerdb.txt cmake-build/
+          tar -czf SnowboardKidsRecompiled.tar.gz -C cmake-build SnowboardKidsRecompiled assets/ recompcontrollerdb.txt
+
+      - name: Archive SnowboardKidsRecomp
+        uses: actions/upload-artifact@v4
+        with:
+          name: SnowboardKidsRecompiled-${{ runner.os }}-ARM64-${{ matrix.type }}
+          path: SnowboardKidsRecompiled.tar.gz
+
+      - name: Build AppImage
+        run: bash .github/linux/appimage.sh
+
+      - name: SnowboardKidsRecomp AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: SnowboardKidsRecompiled-AppImage-ARM64-${{ matrix.type }}
+          path: SnowboardKidsRecompiled-*.AppImage
+
+  build-windows:
+    needs: resolve_version
+    if: ${{ contains(fromJSON(inputs.PLATFORMS), 'windows') }}
+    runs-on: windows-latest
+    env:
+      GAME_VERSION: ${{ needs.resolve_version.outputs.game_version }}
+    strategy:
+      matrix:
+        type: ${{ fromJSON(inputs.WINDOWS_BUILD_TYPES) }}
+    name: windows (${{ matrix.type }})
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
+          submodules: false
+
+      - name: Checkout submodules
+        run: |
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
+          git submodule sync --recursive
+          git submodule update --init --recursive
+
+      - name: Install Windows Dependencies
+        run: |
+          choco install ninja
+
+      - name: Download portable LLVM
+        run: |
+          $ProgressPreference = 'SilentlyContinue'
+          Invoke-WebRequest -Uri "https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.3/LLVM-19.1.3-Windows-X64.tar.xz" -OutFile "LLVM.tar.xz"
+          New-Item -ItemType Directory -Path portable-llvm > $null
+          7z x LLVM.tar.xz
+          7z x LLVM.tar -oportable-llvm
+
+      - name: Configure Developer Command Prompt
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Checkout baserom
+        uses: actions/checkout@v4
+        with:
+          repository: cdlewis/snowboardkids-private
+          token: ${{ secrets.PRIVATE_REPO_ACCESS }}
+          path: baserom
+
+      - name: Decrypt baserom
+        run: gpg --quiet --batch --yes --decrypt --passphrase "$env:BASEROM_KEY" --output snowboardkids.z64 snowboardkids.z64.gpg
+        env:
+          BASEROM_KEY: ${{ secrets.BASEROM_KEY }}
+        working-directory: baserom
+
+      - name: Prepare Build
+        run: Copy-Item -Path ".\baserom\snowboardkids.z64" -Destination ".\snowboardkids.z64"
+
+      - name: Build N64Recomp and RSPRecomp
+        run: |
+          git clone https://github.com/Mr-Wiseguy/N64Recomp.git --recurse-submodules N64RecompSource
+          cd N64RecompSource
+          git checkout ${{ inputs.N64RECOMP_COMMIT }}
+          git submodule update --init --recursive
+
+          $env:PATH="$env:USERPROFILE/.cargo/bin;$env:PATH"
+          $cpuCores = (Get-CimInstance -ClassName Win32_Processor).NumberOfLogicalProcessors
+
+          cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_MAKE_PROGRAM=ninja -G Ninja -S . -B cmake-build
+          cmake --build cmake-build --config Release --target N64RecompCLI -j $cpuCores
+          cmake --build cmake-build --config Release --target RSPRecomp -j $cpuCores
+
+          cp cmake-build/N64Recomp.exe ..
+          cp cmake-build/RSPRecomp.exe ..
+
+      - name: Run N64Recomp and RSPRecomp
+        run: |
+          ./N64Recomp.exe us.toml
+          ./RSPRecomp.exe aspMain.us.toml
+
+      - name: Run patch recompiler
+        run: |
+          $env:CC="..\portable-llvm\LLVM-19.1.3-Windows-X64\bin\clang"
+          $env:LD="..\portable-llvm\LLVM-19.1.3-Windows-X64\bin\ld.lld"
+
+          make -C patches
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+          $lastExitCode = 0
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            ./N64Recomp.exe patches.toml
+            $lastExitCode = $LASTEXITCODE
+            if ($lastExitCode -eq 0) {
+              exit 0
+            }
+
+            Write-Warning "N64Recomp patches.toml failed with exit code $lastExitCode on attempt $attempt."
+            Start-Sleep -Seconds 2
+          }
+
+          exit $lastExitCode
+
+      - name: Build SnowboardKidsRecomp
+        run: |
+          $env:PATH="$env:USERPROFILE/.cargo/bin;$env:PATH"
+          $cpuCores = (Get-CimInstance -ClassName Win32_Processor).NumberOfLogicalProcessors
+
+          $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -ne 'C:\Program Files\LLVM\bin' }) -join ';'
+
+          cmake -DCMAKE_BUILD_TYPE=${{ matrix.type }} -DCMAKE_CXX_COMPILER=clang-cl -DCMAKE_C_COMPILER=clang-cl -DCMAKE_MAKE_PROGRAM=ninja -DPATCHES_C_COMPILER="..\portable-llvm\LLVM-19.1.3-Windows-X64\bin\clang" -DPATCHES_LD="..\portable-llvm\LLVM-19.1.3-Windows-X64\bin\ld.lld" -G Ninja -S . -B cmake-build -DCMAKE_CXX_FLAGS="-Xclang -fexceptions -Xclang -fcxx-exceptions"
+          cmake --build cmake-build --config ${{ matrix.type }} --target SnowboardKidsRecompiled -j $cpuCores
+        env:
+          SDL2_VERSION: ${{ inputs.SDL2_VERSION }}
+
+      - name: Prepare Archive
+        run: |
+          cmake -DOUTPUT_DIR=cmake-build/assets -P scripts/stage-assets.cmake
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Copy-Item -Path "recompcontrollerdb.txt" -Destination "cmake-build/recompcontrollerdb.txt"
+          Move-Item -Path "cmake-build/SnowboardKidsRecompiled.pdb" -Destination "SnowboardKidsRecompiled.pdb"
+
+      - name: Archive SnowboardKidsRecomp
+        uses: actions/upload-artifact@v4
+        with:
+          name: SnowboardKidsRecompiled-${{ runner.os }}-${{ matrix.type }}
+          path: |
+            cmake-build/SnowboardKidsRecompiled.exe
+            cmake-build/dxcompiler.dll
+            cmake-build/dxil.dll
+            cmake-build/SDL2.dll
+            cmake-build/assets/
+            cmake-build/recompcontrollerdb.txt
+
+      - name: Archive Debug Files
+        uses: actions/upload-artifact@v4
+        with:
+          name: SnowboardKidsRecompiled-PDB-${{ matrix.type }}
+          path: SnowboardKidsRecompiled.pdb
+
+  build-macos:
+    needs: resolve_version
+    if: ${{ contains(fromJSON(inputs.PLATFORMS), 'macos') }}
+    runs-on: macos-26
+    env:
+      GAME_VERSION: ${{ needs.resolve_version.outputs.game_version }}
+    strategy:
+      matrix:
+        type: ${{ fromJSON(inputs.BUILD_TYPES) }}
+    name: macos (x64, arm64, ${{ matrix.type }})
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
+          submodules: false
+
+      - name: Checkout submodules
+        run: |
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
+          git submodule sync --recursive
+          git submodule update --init --recursive
+
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ runner.os }}-sk1re-ccache-${{ matrix.type }}
+
+      - name: Homebrew Setup
+        run: |
+          brew install ninja
+          brew uninstall --ignore-dependencies libpng freetype
+
+      - name: MacPorts Setup
+        uses: melusina-org/setup-macports@v1
+        id: macports
+        with:
+          parameters: .github/macos/macports.yaml
+
+      - name: Checkout baserom
+        uses: actions/checkout@v4
+        with:
+          repository: cdlewis/snowboardkids-private
+          token: ${{ secrets.PRIVATE_REPO_ACCESS }}
+          path: baserom
+
+      - name: Decrypt baserom
+        run: |
+          gpg --quiet --batch --yes --decrypt --passphrase "$BASEROM_KEY" --output snowboardkids.z64 snowboardkids.z64.gpg
+        env:
+          BASEROM_KEY: ${{ secrets.BASEROM_KEY }}
+        working-directory: baserom
+
+      - name: Prepare Build
+        run: cp baserom/snowboardkids.z64 ./
+
+      - name: Build N64Recomp and RSPRecomp
+        run: |
+          git clone https://github.com/Mr-Wiseguy/N64Recomp.git --recurse-submodules N64RecompSource
+          cd N64RecompSource
+          git checkout ${{ inputs.N64RECOMP_COMMIT }}
+          git submodule update --init --recursive
+
+          export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
+          cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_MAKE_PROGRAM=ninja -G Ninja -S . -B cmake-build
+          cmake --build cmake-build --config Release --target N64RecompCLI -j $(sysctl -n hw.ncpu)
+          cmake --build cmake-build --config Release --target RSPRecomp -j $(sysctl -n hw.ncpu)
+
+          cp cmake-build/N64Recomp ..
+          cp cmake-build/RSPRecomp ..
+
+      - name: Run N64Recomp and RSPRecomp
+        run: |
+          ./N64Recomp us.toml
+          ./RSPRecomp aspMain.us.toml
+
+      - name: Build SnowboardKidsRecomp
+        run: |
+          export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
+          cmake -DCMAKE_BUILD_TYPE=${{ matrix.type }} -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_MAKE_PROGRAM=ninja -G Ninja -S . -B cmake-build \
+          -DPATCHES_LD=/opt/local/bin/ld.lld-mp-18 -DCMAKE_AR=/opt/local/bin/llvm-ar-mp-18 -DPATCHES_C_COMPILER=/opt/local/bin/clang-mp-18 \
+          -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
+          cmake --build cmake-build --config ${{ matrix.type }} --target SnowboardKidsRecompiled -j $(sysctl -n hw.ncpu)
+
+      - name: Prepare Archive
+        run: |
+          mv cmake-build/SnowboardKidsRecompiled.app SnowboardKidsRecompiled.app
+          zip -r -y SnowboardKidsRecompiled.zip SnowboardKidsRecompiled.app
+
+      - name: Archive SnowboardKidsRecomp
+        uses: actions/upload-artifact@v4
+        with:
+          name: SnowboardKidsRecompiled-${{ runner.os }}-${{ matrix.type }}
+          path: SnowboardKidsRecompiled.zip
