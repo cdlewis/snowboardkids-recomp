@@ -35,10 +35,21 @@
 #define osVirtualToPhysical osVirtualToPhysical_recomp
 
 #include "PR/ultratypes.h"
-#include "PR/os_pi.h"
-#include "PR/gbi.h"
+// mbi.h defines _SHIFTL/_SHIFTR and then includes gbi.h and abi.h, which need them.
+// Including gbi.h directly leaves the gDP/gSP macros referring to undefined symbols.
+#include "PR/mbi.h"
 #include "rt64_extended_gbi.h"
-#include "PR/abi.h"
+#include "PR/ucode.h"
+
+// Decompilation headers.
+//
+// Do not add PR/os_pi.h or PR/os_message.h here. The decompilation defines its own
+// OSMesg / OSMesgQueue / OSIoMesg in game/audio/audio_engine.h and its translation
+// units hand-declare the libultra functions they need rather than including those
+// headers; pulling both in produces conflicting typedefs. game/engine/system_runtime.h
+// is likewise excluded because it declares `void main(void *)`, which C rejects.
+#include "game/audio/audio_engine.h"
+#include "game/engine/frame_render_task.h"
 
 // Native helpers backed by src/game/recomp_api.cpp; see patches/syms.ld.
 int recomp_printf(const char* fmt, ...);
