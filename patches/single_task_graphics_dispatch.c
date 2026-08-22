@@ -40,6 +40,8 @@ RECOMP_PATCH void submitFramebufferRenderTask(u8 frameIndex) {
     gCurrentFrameRenderData = &gFrameRenderTasks[frameIndex].renderData;
     schedulerTask = &gFrameRenderTasks[frameIndex].schedulerTask;
 
+    // @recomp Enable RT64's extended GBI before emitting the HUD alignment commands.
+    gEXEnable(gRegionAllocPtr++);
     gSPSegment(gRegionAllocPtr++, 0, 0);
     gDPSetScissor(gRegionAllocPtr++, G_SC_NON_INTERLACE, 0, 0, 320, 240);
     gSPClearGeometryMode(gRegionAllocPtr++,

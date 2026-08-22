@@ -151,7 +151,9 @@ static void apply_test_hud_ratio_override() {
     } else if (std::strcmp(test_hud_ratio, "expanded") == 0) {
         hud_ratio_mode = ultramodern::renderer::HUDRatioMode::Full;
     } else {
-        return;
+        std::fprintf(stderr, "TEST_HUD_RATIO=\"%s\" is not one of original, 16:9, expanded\n",
+                     test_hud_ratio);
+        std::exit(1);
     }
 
     graphics_config.hr_option = hud_ratio_mode;
