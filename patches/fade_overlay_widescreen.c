@@ -1,5 +1,7 @@
 #include "patches.h"
 
+#include "transform_ids.h"
+
 #include "game/engine/render_callback.h"
 #include "game/engine/viewport_manager.h"
 #include "game/race/camera/race_camera.h"
@@ -40,6 +42,22 @@ extern void initMenuAsciiFontTexture(void);
 
 #define runtimeModelRenderCallbackLists (*(RenderCallbackNode * (*)[24]) & gModelRenderCallbackList)
 #define VIEWPORT_COUNT 4
+
+static void pushViewportProjectionMatrixGroup(u32 base) {
+    u32 id = base | gCurrentViewportIndex;
+
+    if (D_801121E0[gCurrentViewportIndex].initialized != 0) {
+        id |= PROJECTION_VIEWPORT_RACE_CONTEXT_BIT;
+    }
+
+    gEXMatrixGroup(
+        gRegionAllocPtr++, id, G_EX_INTERPOLATE_SIMPLE, G_EX_PUSH, G_MTX_PROJECTION,
+        G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE,
+        G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_SKIP,
+        G_EX_COMPONENT_INTERPOLATE, G_EX_ORDER_LINEAR, G_EX_EDIT_NONE, G_EX_ASPECT_AUTO,
+        G_EX_COMPONENT_SKIP, G_EX_COMPONENT_AUTO
+    );
+}
 
 RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
     RenderCallbackNode **queue;
@@ -212,6 +230,7 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
                 (D_801121E0[gCurrentViewportIndex].cameraTransform.translation.z << 16) & upperMask;
 
             if (gBackdropRenderCallbackList != NULL) {
+                pushViewportProjectionMatrixGroup(PROJECTION_VIEWPORT_BACKDROP_ID_BASE);
                 gSPPerspNormalize(
                     gRegionAllocPtr++,
                     gViewportStates[gCurrentViewportIndex].overlayPerspectiveNorm
@@ -234,6 +253,7 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
                 );
                 gSPDisplayList(gRegionAllocPtr++, D_800DEF90);
                 runRenderCallbacks(&gBackdropRenderCallbackList);
+                gEXPopMatrixGroup(gRegionAllocPtr++, G_MTX_PROJECTION);
             }
 
             for (i = 0; i < 24; i += 3) {
@@ -243,6 +263,7 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
             }
 
             if (hasModelCallbacks != 0) {
+                pushViewportProjectionMatrixGroup(PROJECTION_VIEWPORT_MAIN_ID_BASE);
                 gSPPerspNormalize(gRegionAllocPtr++, gViewportStates[gCurrentViewportIndex].perspectiveNorm);
                 gSPMatrix(
                     gRegionAllocPtr++,
@@ -275,6 +296,7 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
                         runRenderCallbacks(queue);
                     }
                 }
+                gEXPopMatrixGroup(gRegionAllocPtr++, G_MTX_PROJECTION);
             }
 
             if ((gRaceForegroundRenderCallbackList != NULL) || (gRaceOverlayRenderCallbackList != NULL)) {
