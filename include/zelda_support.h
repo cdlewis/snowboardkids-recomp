@@ -14,6 +14,10 @@ namespace zelda64 {
     void open_file_dialog_multiple(std::function<void(bool success, const std::list<std::filesystem::path>& paths)> callback);
     void show_error_message_box(const char *title, const char *message);
 
+    // Flush the save file and end the process immediately. See the comment on the definition
+    // in support.cpp for why quitting cannot go through recomp::start's teardown.
+    [[noreturn]] void quit_process_now();
+
 // Apple specific methods that usually require Objective-C. Implemented in support_apple.mm.
 #ifdef __APPLE__
     void dispatch_on_ui_thread(std::function<void()> func);

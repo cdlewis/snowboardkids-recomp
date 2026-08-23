@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <stdexcept>
 #include <cinttypes>
+#include <atomic>
 
 #include "nfd.h"
 
@@ -59,6 +60,9 @@
 
 const std::string version_string = sk1_game_version;
 constexpr int sk1_max_players = 4;
+
+// librecomp's shutdown flag, set by ultramodern::quit(). See the note in support.cpp.
+extern std::atomic_bool exited;
 
 template <typename... Ts> void exit_error(const char* str, Ts... args) {
     // TODO pop up an error
@@ -263,6 +267,15 @@ ultramodern::renderer::WindowHandle create_window(ultramodern::gfx_callbacks_t::
 
 void update_gfx(void*) {
     recompinput::handle_events();
+
+    // Every quit path runs inside handle_events on this thread: the window-close prompt, the
+    // config menu's quit button and the launcher's exit option all call ultramodern::quit()
+    // from an SDL or RmlUi callback. So if the game is quitting, it started quitting during the
+    // call above, and this is the last chance to leave before recomp::start tears the world
+    // down around the game's still-running threads.
+    if (exited.load()) {
+        zelda64::quit_process_now();
+    }
 }
 
 static SDL_AudioCVT audio_convert;
@@ -905,5 +918,22 @@ int main(int argc, char** argv) {
     timeEndPeriod(1);
 #endif
 
-    return EXIT_SUCCESS;
+    // Leave without running static destructors or atexit handlers.
+    //
+    // recomp::start joins its own bookkeeping threads, but nothing joins the OSThreads the
+    // game itself created -- see the comment at the end of recomp::start in
+    // librecomp/src/recomp.cpp. Those threads are still executing recompiled code here, and
+    // returning normally would hand them to exit(), which destroys every namespace-scope
+    // global out from under them. librecomp's game registry is one such global, so a game
+    // thread that touches the runtime while __cxa_finalize_ranges is walking that map
+    // segfaults on shutdown -- intermittently, because it depends on what the game's threads
+    // happen to be doing at the moment of the quit.
+    //
+    // Not freeing rdram already removed one victim of this race; the host-side globals are
+    // the rest of it. There is nothing left to tear down that the OS will not reclaim, and
+    // the save thread was joined inside recomp::start, so quitting the process outright is
+    // both sufficient and the only option that does not depend on winning a race. stdout is
+    // flushed explicitly first because _Exit does not.
+    std::fflush(nullptr);
+    std::_Exit(EXIT_SUCCESS);
 }

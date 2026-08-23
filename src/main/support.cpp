@@ -1,9 +1,36 @@
 #include "zelda_support.h"
 #include <SDL.h>
+#include <atomic>
+#include <cstdio>
+#include <cstdlib>
 #include "nfd.h"
 #include "RmlUi/Core.h"
+#include "ultramodern/ultramodern.hpp"
+
+// librecomp's shutdown flag, set by ultramodern::quit(). It is a plain global with external
+// linkage in librecomp/src/recomp.cpp and is not declared in any header; librecomp's own pi.cpp
+// and ultramodern's events.cpp reach for it the same way.
+extern std::atomic_bool exited;
 
 namespace zelda64 {
+    [[noreturn]] void quit_process_now() {
+        // Quitting cannot be allowed to unwind through recomp::start. Once its loop sees
+        // `exited` it joins its own bookkeeping threads and then unmaps rdram -- but nothing
+        // joins the OSThreads the game created, and the thread cleaner only ever joins the ones
+        // that terminate on their own. Those threads are still executing recompiled code, so
+        // they read memory that has just been handed back to the OS, and afterwards run into
+        // the namespace-scope globals that exit() destroys. Both are races whose outcome
+        // depends on what the game's threads happen to be doing at the moment of the quit.
+        //
+        // There is nothing left to tear down that the OS will not reclaim: RT64's shutdown is
+        // pure GPU-resource teardown with no persistent writes, and the save file is the only
+        // durable state. The saving thread already sees `exited`, so joining it finishes the
+        // write it has coalesced and returns immediately.
+        ultramodern::join_saving_thread();
+        std::fflush(nullptr);
+        std::_Exit(EXIT_SUCCESS);
+    }
+
     // MARK: - Internal Helpers
     void perform_file_dialog_operation(const std::function<void(bool, const std::filesystem::path&)>& callback) {
         nfdnchar_t* native_path = nullptr;

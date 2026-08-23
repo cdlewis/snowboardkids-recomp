@@ -4,6 +4,7 @@
 #include "recomp_api.h"
 #include "librecomp/overlays.hpp"
 #include "zelda_config.h"
+#include "zelda_support.h"
 #include "recompinput/input_state.h"
 #include "recompinput/players.h"
 #include "recompui/renderer.h"
@@ -41,6 +42,10 @@ extern "C" void recomp_puts(uint8_t* rdram, recomp_context* ctx) {
 
 extern "C" void recomp_exit(uint8_t* rdram, recomp_context* ctx) {
     ultramodern::quit();
+    // Unlike the UI quit paths, this one runs on a game thread rather than inside
+    // handle_events, so update_gfx may not get another turn before recomp::start starts
+    // tearing down. Leave from here instead of racing it.
+    zelda64::quit_process_now();
 }
 
 extern "C" void recomp_get_gyro_deltas(uint8_t* rdram, recomp_context* ctx) {
