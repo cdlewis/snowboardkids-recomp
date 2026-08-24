@@ -464,8 +464,8 @@ std::vector<recomp::GameEntry> supported_games = {
         .display_name = "Snowboard Kids",
         .game_id = u8"snowboardkids.n64.us",
         .mod_game_id = "snowboardkids",
-        // Snowboard Kids saves to a Controller Pak (osPfs*); it has no EEPROM.
-        .save_type = recomp::SaveType::None,
+        // The SRAM-sized buffer stores the recomp replacement for the game's Controller Pak save.
+        .save_type = recomp::SaveType::Sram,
         .is_enabled = true,
         .has_compressed_code = false,
         .entrypoint_address = get_entrypoint_address(),

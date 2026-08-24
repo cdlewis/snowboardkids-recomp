@@ -222,3 +222,43 @@ extern "C" void recomp_set_game_player_count(uint8_t* rdram, recomp_context* ctx
         recompinput::players::request_game_player_count(player_count);
     }
 }
+
+// librecomp's save-buffer functions are not exposed in a header.
+void save_write(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t count);
+void save_read(RDRAM_ARG PTR(void) rdram_address, uint32_t offset, uint32_t count);
+
+static constexpr uint32_t sk1_save_buffer_size = 0x8000;
+
+static bool sk1_save_range_valid(uint32_t offset, uint32_t size) {
+    return size != 0 && offset <= sk1_save_buffer_size && size <= sk1_save_buffer_size - offset;
+}
+
+// s32 recomp_save_read(u32 offset, void *dst, u32 size); returns 1 on success, 0 otherwise.
+extern "C" void recomp_save_read(uint8_t* rdram, recomp_context* ctx) {
+    uint32_t offset = ctx->r4;
+    gpr dst = ctx->r5;
+    uint32_t size = ctx->r6;
+
+    if (!sk1_save_range_valid(offset, size)) {
+        _return<s32>(ctx, 0);
+        return;
+    }
+
+    save_read(rdram, dst, offset, size);
+    _return<s32>(ctx, 1);
+}
+
+// s32 recomp_save_write(u32 offset, const void *src, u32 size); returns 1 on success, 0 otherwise.
+extern "C" void recomp_save_write(uint8_t* rdram, recomp_context* ctx) {
+    uint32_t offset = ctx->r4;
+    gpr src = ctx->r5;
+    uint32_t size = ctx->r6;
+
+    if (!sk1_save_range_valid(offset, size)) {
+        _return<s32>(ctx, 0);
+        return;
+    }
+
+    save_write(rdram, src, offset, size);
+    _return<s32>(ctx, 1);
+}

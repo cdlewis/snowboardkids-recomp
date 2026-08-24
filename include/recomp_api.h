@@ -31,5 +31,7 @@ extern "C" void recomp_get_invert_y_axis_mode(uint8_t* rdram, recomp_context* ct
 extern "C" void recomp_get_camera_inputs(uint8_t* rdram, recomp_context* ctx);
 extern "C" void recomp_set_right_analog_suppressed(uint8_t* rdram, recomp_context* ctx);
 extern "C" void recomp_set_game_player_count(uint8_t* rdram, recomp_context* ctx);
+extern "C" void recomp_save_read(uint8_t* rdram, recomp_context* ctx);
+extern "C" void recomp_save_write(uint8_t* rdram, recomp_context* ctx);
 
 #endif

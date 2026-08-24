@@ -34,6 +34,8 @@ recomp_get_voice_volume = 0x8F0000D8;
 recomp_get_invert_y_axis_mode = 0x8F0000E8;
 recomp_get_vertical_2p_split_screen_enabled = 0x8F000110;
 recomp_set_game_player_count = 0x8F00010C;
+recomp_save_read = 0x8F000114;
+recomp_save_write = 0x8F000118;
 sqrtf_recomp = 0x8F0000B8;
 
 /* librecomp / ultramodern reimplementations. Only libultra functions that are
