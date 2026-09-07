@@ -1,4 +1,5 @@
 #include "patches.h"
+#include "race_split_screen.h"
 
 #include "game/race/race_state.h"
 #include "game/menu/renderer/menu_render_utils.h"
@@ -156,6 +157,17 @@ RECOMP_PATCH void drawSinglePlayerRaceHud(void *arg0) {
     hudEndAnchoredDraw();
 }
 
+RECOMP_PATCH void drawThreePlayerHudDivider(void *arg0) {
+    f32 scale = recomp_get_target_aspect_ratio(4.0f / 3.0f) / (4.0f / 3.0f);
+    s32 offset = (s32)((HUD_SCREEN_WIDTH / 4) * (scale - 1.0f) * 4.0f + 0.5f);
+
+    // The NO ENTRY panel belongs to the unused bottom-right quadrant, not the full-screen centre.
+    gEXSetRectAspect(gRegionAllocPtr++, G_EX_ASPECT_ADJUST);
+    gEXSetRectAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, G_EX_ORIGIN_NONE, offset, 0, offset, 0);
+    drawAssetTableSprite(0xC, 0x2C, getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE), 0x90);
+    gEXSetRectAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, G_EX_ORIGIN_NONE, 0, 0, 0, 0);
+}
+
 RECOMP_PATCH void drawRaceCourseProgressMeter(void *arg0) {
     s32 i;
     s32 j;
@@ -187,7 +199,7 @@ RECOMP_PATCH void drawRaceCourseProgressMeter(void *arg0) {
         yBase = -0x56;
     }
     if (gRaceHudMode == RACE_HUD_MODE_TWO_PLAYER) {
-        xBase = 0x78;
+        xBase = raceUsesVerticalTwoPlayerSplit() ? -8 : 0x78;
         yBase = -0x48;
     }
     if ((gRaceHudMode == RACE_HUD_MODE_THREE_PLAYER) || (gRaceHudMode == RACE_HUD_MODE_FOUR_PLAYER)) {
@@ -199,6 +211,13 @@ RECOMP_PATCH void drawRaceCourseProgressMeter(void *arg0) {
     hudBeginAnchoredDraw();
 
     hudAnchor(xBase == 0x78 ? G_EX_ORIGIN_RIGHT : G_EX_ORIGIN_CENTER);
+    if (xBase == -8) {
+        AssetTable *table = getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE);
+        // Match SBK2's covered-edge correction: centre the visible stroke, not the sprite bounds.
+        s32 center = (HUD_SCREEN_WIDTH / 2 + xBase + 4) * 4 + table->entries[0x50].width * 2 - 4;
+        gEXSetRectAspect(gRegionAllocPtr++, G_EX_ASPECT_ADJUST);
+        gEXSetRectAlign(gRegionAllocPtr++, G_EX_ORIGIN_CENTER, G_EX_ORIGIN_CENTER, -center, 0, -center, 0);
+    }
     drawAssetTableSprite(
         (s16)(xBase + 4),
         (s16)(yBase + 4),

@@ -1,11 +1,55 @@
 #include "patches.h"
 #include "game/engine/viewport_manager.h"
 #include "PR/gu.h"
+#include "game/engine/game_task_scheduler.h"
+#include "game/race/camera/race_camera.h"
+#include "game/race/player/race_player_input.h"
+#include "game/race/flow/race_flow.h"
+#include "race_split_screen.h"
+
+extern s32 recomp_get_vertical_2p_split_screen_enabled(void);
+extern RaceCamera D_801121E0[RACE_CAMERA_COUNT];
+static s32 sVerticalTwoPlayerSplit;
+
+s32 raceUsesVerticalTwoPlayerSplit(void) {
+    return sVerticalTwoPlayerSplit && gPlayerCount == 2 && D_801121E0[0].initialized != 0;
+}
 
 #define SCREEN_WIDTH 320
 #define SCREEN_HEIGHT 240
 
 #define VIEWPORT_EDGE_SNAP 16
+
+static f32 configureRaceSplitDirection(s32 index, s32 *x, s32 *y, u16 *width, u16 *height,
+                                     u16 *scaleX, u16 *scaleY, f32 *aspect) {
+    s32 startingRace = gCurrentGameTask != NULL &&
+                      gCurrentGameTask->callbacks[0] == fadeInRaceGameplayViewports;
+    s32 oldX = *x;
+    u16 oldWidth = *width;
+    u16 oldScaleX = *scaleX;
+    f32 fov = 70.0f;
+
+    // Like SBK2, latch the option when the first gameplay viewport is configured.
+    if (startingRace && index == 0) {
+        sVerticalTwoPlayerSplit = gPlayerCount == 2 && recomp_get_vertical_2p_split_screen_enabled();
+    }
+    if (index >= 2 || !sVerticalTwoPlayerSplit || gPlayerCount != 2 ||
+        (!startingRace && D_801121E0[index].initialized == 0)) {
+        return fov;
+    }
+
+    // Transpose the authored inset rows, including the winner's transition back to a full-screen view.
+    *x = 160 + (*y - 120) * 146 / 106;
+    *y = 120 + (oldX - 160) * 106 / 146;
+    *width = *height * 18 / 13;
+    *height = oldWidth * 13 / 18;
+    *scaleX = *scaleY * 4 / 3;
+    *scaleY = oldScaleX * 3 / 4;
+    // Match SBK2's 110-degree vertical-split camera and return to 70 degrees as the winner expands.
+    fov += 30.0f * (*aspect - 4.0f / 3.0f);
+    *aspect = (16.0f / 9.0f) / *aspect;
+    return fov;
+}
 
 extern const f32 gDefaultViewportOverlayFarClip[1];
 extern const f32 gCustomViewportOverlayFarClip[1];
@@ -54,6 +98,8 @@ RECOMP_PATCH void configureViewport(
     u16 scaleY,
     f32 aspect
 ) {
+    f32 fov = configureRaceSplitDirection(viewportIndex, &centerX, &centerY, &width, &height,
+                                         &scaleX, &scaleY, &aspect);
     gViewportStates[viewportIndex].active = 1;
     gViewportStates[viewportIndex].viewport.vp.vtrans[0] = centerX * 4;
     gViewportStates[viewportIndex].viewport.vp.vtrans[1] = centerY * 4;
@@ -102,7 +148,7 @@ RECOMP_PATCH void configureViewport(
     guPerspective(
         &gViewportStates[viewportIndex].projectionMatrix,
         &gViewportStates[viewportIndex].perspectiveNorm,
-        70.0f,
+        fov,
         aspect,
         10.0f,
         2800.0f,
@@ -111,7 +157,7 @@ RECOMP_PATCH void configureViewport(
     guPerspective(
         &gViewportStates[viewportIndex].overlayProjectionMatrix,
         &gViewportStates[viewportIndex].overlayPerspectiveNorm,
-        70.0f,
+        fov,
         aspect,
         10.0f,
         gDefaultViewportOverlayFarClip[0],
@@ -206,6 +252,8 @@ RECOMP_PATCH void configureRaceViewport(
     u16 scaleY,
     f32 aspect
 ) {
+    f32 fov = configureRaceSplitDirection(viewportIndex, &centerX, &centerY, &width, &height,
+                                         &scaleX, &scaleY, &aspect);
     gViewportStates[viewportIndex].active = 1;
     gViewportStates[viewportIndex].viewport.vp.vtrans[0] = centerX * 4;
     gViewportStates[viewportIndex].viewport.vp.vtrans[1] = centerY * 4;
@@ -254,7 +302,7 @@ RECOMP_PATCH void configureRaceViewport(
     guPerspective(
         &gViewportStates[viewportIndex].projectionMatrix,
         &gViewportStates[viewportIndex].perspectiveNorm,
-        70.0f,
+        fov,
         aspect,
         10.0f,
         1000.0f,
@@ -263,7 +311,7 @@ RECOMP_PATCH void configureRaceViewport(
     guPerspective(
         &gViewportStates[viewportIndex].overlayProjectionMatrix,
         &gViewportStates[viewportIndex].overlayPerspectiveNorm,
-        70.0f,
+        fov,
         aspect,
         10.0f,
         gRaceViewportOverlayFarClip[0],

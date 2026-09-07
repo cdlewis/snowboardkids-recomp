@@ -55,6 +55,7 @@
 int recomp_printf(const char* fmt, ...);
 int _Sprintf(char* buffer, const char* fmt, ...);
 float recomp_powf(float, float);
+float recomp_get_target_aspect_ratio(float original);
 f32 __sinf(f32);
 f32 __cosf(f32);
 float sqrtf(float f);

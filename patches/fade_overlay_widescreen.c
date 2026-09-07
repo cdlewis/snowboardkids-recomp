@@ -1,10 +1,12 @@
 #include "patches.h"
 
 #include "transform_ids.h"
+#include "race_split_screen.h"
 
 #include "game/engine/render_callback.h"
 #include "game/engine/viewport_manager.h"
 #include "game/race/camera/race_camera.h"
+#include "game/race/ui/race_hud.h"
 
 extern s16 gUiBlinkTimer;
 extern s16 gMenuViewportWidth;
@@ -43,8 +45,123 @@ extern void initMenuAsciiFontTexture(void);
 #define runtimeModelRenderCallbackLists (*(RenderCallbackNode * (*)[24]) & gModelRenderCallbackList)
 #define VIEWPORT_COUNT 4
 
+static s32 raceViewportUsesColumns(s32 index) {
+    ViewportState *viewport = &gViewportStates[index];
+    return D_801121E0[index].initialized != 0 && viewport->screenBoundsValid != 0 &&
+           viewport->right - viewport->left <= FRAMEBUFFER_WIDTH / 2;
+}
+
+static void setViewportScissorAlignment(s32 index) {
+    ViewportState *viewport = &gViewportStates[index];
+    if (raceViewportUsesColumns(index)) {
+        if (viewport->left < FRAMEBUFFER_WIDTH / 2) {
+            gEXSetScissorAlign(gRegionAllocPtr++, G_EX_ORIGIN_LEFT, G_EX_ORIGIN_CENTER,
+                              0, 0, -FRAMEBUFFER_WIDTH / 2, 0, 0, 0,
+                              FRAMEBUFFER_WIDTH / 2, FRAMEBUFFER_HEIGHT);
+        } else {
+            gEXSetScissorAlign(gRegionAllocPtr++, G_EX_ORIGIN_CENTER, G_EX_ORIGIN_RIGHT,
+                              -FRAMEBUFFER_WIDTH / 2, 0, -FRAMEBUFFER_WIDTH, 0,
+                              FRAMEBUFFER_WIDTH / 2, 0, FRAMEBUFFER_WIDTH, FRAMEBUFFER_HEIGHT);
+        }
+    } else {
+        gEXSetScissorAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, G_EX_ORIGIN_NONE,
+                          0, 0, 0, 0, 0, 0, FRAMEBUFFER_WIDTH, FRAMEBUFFER_HEIGHT);
+    }
+}
+
+static void emitRaceViewport(void) {
+    Vp *viewport = &gCurrentFrameRenderData->viewport.viewports[gCurrentViewportIndex];
+    if (raceViewportUsesColumns(gCurrentViewportIndex)) {
+        gEXViewport(gRegionAllocPtr++, G_EX_ORIGIN_CENTER, viewport);
+    } else {
+        gSPViewport(gRegionAllocPtr++, viewport);
+    }
+}
+
+static void drawRaceViewportDividers(void) {
+    RenderCallbackNode *hud = gRaceOverlayRenderCallbackList;
+    s32 viewportCount = 0;
+    s32 i;
+
+    // Use this frame's HUD work, not the HUD mode retained while moving between screens.
+    // Original game code queues the US dump's address even though the HUD implementation is replaced.
+    const u32 originalTwoPlayerHudAddress = 0x800799DC;
+    const u32 originalMultiplayerHudAddress = 0x80079F04;
+    while (hud != NULL && (u32)hud->callback != originalTwoPlayerHudAddress &&
+           (u32)hud->callback != originalMultiplayerHudAddress &&
+           hud->callback != drawTwoPlayerRaceHud && hud->callback != drawMultiplayerRaceHud) {
+        hud = hud->next;
+    }
+    if (hud == NULL) {
+        return;
+    }
+
+    for (i = 0; i < VIEWPORT_COUNT; i++) {
+        if (D_801121E0[i].initialized != 0 && gViewportStates[i].screenBoundsValid != 0) {
+            viewportCount++;
+        }
+    }
+    if (viewportCount < 2) {
+        return;
+    }
+
+    gEXPushScissor(gRegionAllocPtr++);
+    gEXPushOtherMode(gRegionAllocPtr++);
+    gEXPushFillColor(gRegionAllocPtr++);
+    gEXPushCombineMode(gRegionAllocPtr++);
+    gEXPushPrimColor(gRegionAllocPtr++);
+    gEXSetScissorAlign(gRegionAllocPtr++, G_EX_ORIGIN_LEFT, G_EX_ORIGIN_RIGHT,
+                      0, 0, -FRAMEBUFFER_WIDTH, 0, 0, 0, FRAMEBUFFER_WIDTH, FRAMEBUFFER_HEIGHT);
+    gDPSetScissor(gRegionAllocPtr++, G_SC_NON_INTERLACE, 0, 0, FRAMEBUFFER_WIDTH, FRAMEBUFFER_HEIGHT);
+    gEXSetRectAspect(gRegionAllocPtr++, G_EX_ASPECT_AUTO);
+    gEXSetRectAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, G_EX_ORIGIN_NONE, 0, 0, 0, 0);
+    gDPPipeSync(gRegionAllocPtr++);
+    gDPSetCycleType(gRegionAllocPtr++, G_CYC_FILL);
+    gDPSetRenderMode(gRegionAllocPtr++, G_RM_NOOP, G_RM_NOOP2);
+    gDPSetFillColor(gRegionAllocPtr++, 0x00010001);
+
+    // Fill-cycle endpoints are inclusive, restoring the original two-native-pixel gaps.
+    if (viewportCount == 2 && !raceUsesVerticalTwoPlayerSplit()) {
+        // Use output-edge origins rather than the independently configured HUD width.
+        gEXSetRectAspect(gRegionAllocPtr++, G_EX_ASPECT_ADJUST);
+        gEXSetRectAlign(gRegionAllocPtr++, G_EX_ORIGIN_LEFT, G_EX_ORIGIN_RIGHT,
+                       0, 0, -(FRAMEBUFFER_WIDTH - 1) * 4, 0);
+    }
+    if (viewportCount >= 3 || !raceUsesVerticalTwoPlayerSplit()) {
+        gDPFillRectangle(gRegionAllocPtr++, 0, FRAMEBUFFER_HEIGHT / 2 - 1,
+                         FRAMEBUFFER_WIDTH - 1, FRAMEBUFFER_HEIGHT / 2);
+    }
+
+    if (viewportCount >= 3 || raceUsesVerticalTwoPlayerSplit()) {
+        // Draw as an opaque rectangle, not a fill-cycle clear: clear endpoints round
+        // outwards (and explicit origins quantize them again), making the vertical arm
+        // wider than the horizontal gap at non-integer output scales.
+        gDPPipeSync(gRegionAllocPtr++);
+        gDPSetCycleType(gRegionAllocPtr++, G_CYC_1CYCLE);
+        gDPSetRenderMode(gRegionAllocPtr++, G_RM_OPA_SURF, G_RM_OPA_SURF2);
+        gDPSetCombineMode(gRegionAllocPtr++, G_CC_PRIMITIVE, G_CC_PRIMITIVE);
+        gDPSetPrimColor(gRegionAllocPtr++, 0, 0, 0, 0, 0, 255);
+        gEXSetRectAspect(gRegionAllocPtr++, G_EX_ASPECT_ADJUST);
+        // Use the progress meter's explicit centre so output-scale rounding stays aligned.
+        gEXSetRectAlign(gRegionAllocPtr++, G_EX_ORIGIN_CENTER, G_EX_ORIGIN_CENTER,
+                       -FRAMEBUFFER_WIDTH * 2 + 4, 0, -FRAMEBUFFER_WIDTH * 2 + 4, 0);
+        // Unlike fill-cycle endpoints, one-cycle rectangle endpoints are exclusive.
+        gDPFillRectangle(gRegionAllocPtr++, FRAMEBUFFER_WIDTH / 2 - 1, 0,
+                         FRAMEBUFFER_WIDTH / 2 + 1, FRAMEBUFFER_HEIGHT);
+    }
+
+    gDPPipeSync(gRegionAllocPtr++);
+    gEXPopPrimColor(gRegionAllocPtr++);
+    gEXPopCombineMode(gRegionAllocPtr++);
+    gEXPopFillColor(gRegionAllocPtr++);
+    gEXPopOtherMode(gRegionAllocPtr++);
+    gEXPopScissor(gRegionAllocPtr++);
+    gEXSetRectAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, G_EX_ORIGIN_NONE, 0, 0, 0, 0);
+}
+
 static void pushViewportProjectionMatrixGroup(u32 base) {
     u32 id = base | gCurrentViewportIndex;
+    u32 aspect = raceViewportUsesColumns(gCurrentViewportIndex) ? G_EX_ASPECT_ADJUST : G_EX_ASPECT_AUTO;
 
     if (D_801121E0[gCurrentViewportIndex].initialized != 0) {
         id |= PROJECTION_VIEWPORT_RACE_CONTEXT_BIT;
@@ -54,7 +171,7 @@ static void pushViewportProjectionMatrixGroup(u32 base) {
         gRegionAllocPtr++, id, G_EX_INTERPOLATE_SIMPLE, G_EX_PUSH, G_MTX_PROJECTION,
         G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE,
         G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_SKIP,
-        G_EX_COMPONENT_INTERPOLATE, G_EX_ORDER_LINEAR, G_EX_EDIT_NONE, G_EX_ASPECT_AUTO,
+        G_EX_COMPONENT_INTERPOLATE, G_EX_ORDER_LINEAR, G_EX_EDIT_NONE, aspect,
         G_EX_COMPONENT_SKIP, G_EX_COMPONENT_AUTO
     );
 }
@@ -66,6 +183,12 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
     s16 left;
     s16 top;
     s32 i;
+    s32 splitFrame = 0;
+    f32 aspectScale = recomp_get_target_aspect_ratio(4.0f / 3.0f) / (4.0f / 3.0f);
+
+    for (i = 0; i < VIEWPORT_COUNT; i++) {
+        splitFrame |= raceViewportUsesColumns(i);
+    }
 
     gUiBlinkTimer++;
     gMenuViewportWidth = 288;
@@ -74,6 +197,11 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
     gMenuViewportCenterY = 120;
 
     gDPPipeSync(gRegionAllocPtr++);
+    gEXSetViewportAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, 0, 0);
+    gEXSetRectAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, G_EX_ORIGIN_NONE, 0, 0, 0, 0);
+    gEXSetRectAspect(gRegionAllocPtr++, splitFrame ? G_EX_ASPECT_ADJUST : G_EX_ASPECT_AUTO);
+    gEXSetScissorAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, G_EX_ORIGIN_NONE,
+                      0, 0, 0, 0, 0, 0, FRAMEBUFFER_WIDTH, FRAMEBUFFER_HEIGHT);
     gDPSetScissor(
         gRegionAllocPtr++, G_SC_NON_INTERLACE, 0, 0, FRAMEBUFFER_WIDTH, FRAMEBUFFER_HEIGHT
     );
@@ -92,6 +220,13 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
         if (gViewportStates[gCurrentViewportIndex].screenBoundsValid != 0) {
             gCurrentFrameRenderData->viewport.viewports[gCurrentViewportIndex] =
                 gViewportStates[gCurrentViewportIndex].viewport;
+            if (raceViewportUsesColumns(gCurrentViewportIndex)) {
+                Vp *viewport = &gCurrentFrameRenderData->viewport.viewports[gCurrentViewportIndex];
+                f32 center = (viewport->vp.vtrans[0] - FRAMEBUFFER_WIDTH * 2) * aspectScale;
+                // SBK2 widens a frame-local viewport and submits its centre relative to the output centre.
+                viewport->vp.vscale[0] = (s16)(viewport->vp.vscale[0] * aspectScale + 0.5f);
+                viewport->vp.vtrans[0] = (s16)(center + (center < 0.0f ? -0.5f : 0.5f));
+            }
             gCurrentFrameRenderData->viewport.projections[gCurrentViewportIndex] =
                 gViewportStates[gCurrentViewportIndex].projectionMatrix;
             gCurrentFrameRenderData->viewport.overlayProjections[gCurrentViewportIndex] =
@@ -113,6 +248,7 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
             gViewportMatrix = &gCurrentFrameRenderData->viewport.viewportMatrices[gCurrentViewportIndex];
 
             gDPPipeSync(gRegionAllocPtr++);
+            setViewportScissorAlignment(gCurrentViewportIndex);
             gDPSetScissor(
                 gRegionAllocPtr++,
                 G_SC_NON_INTERLACE,
@@ -240,7 +376,7 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
                     &gCurrentFrameRenderData->viewport.overlayProjections[gCurrentViewportIndex],
                     G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION
                 );
-                gSPViewport(gRegionAllocPtr++, &gCurrentFrameRenderData->viewport.viewports[gCurrentViewportIndex]);
+                emitRaceViewport();
                 gSPMatrix(
                     gRegionAllocPtr++,
                     &gCurrentFrameRenderData->viewport.rotations[gCurrentViewportIndex],
@@ -270,7 +406,7 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
                     &gCurrentFrameRenderData->viewport.projections[gCurrentViewportIndex],
                     G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_PROJECTION
                 );
-                gSPViewport(gRegionAllocPtr++, &gCurrentFrameRenderData->viewport.viewports[gCurrentViewportIndex]);
+                emitRaceViewport();
                 gSPMatrix(
                     gRegionAllocPtr++,
                     &gCurrentFrameRenderData->viewport.rotations[gCurrentViewportIndex],
@@ -300,6 +436,14 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
             }
 
             if ((gRaceForegroundRenderCallbackList != NULL) || (gRaceOverlayRenderCallbackList != NULL)) {
+                if (raceViewportUsesColumns(gCurrentViewportIndex)) {
+                    // Keep the authored HUD group centred in its physical quadrant without stretching sprites.
+                    f32 shift = (gMenuViewportCenterX - FRAMEBUFFER_WIDTH / 2) * (aspectScale - 1.0f) * 4.0f;
+                    s32 offset = (s32)(shift + (shift < 0.0f ? -0.5f : 0.5f));
+                    gEXSetRectAspect(gRegionAllocPtr++, G_EX_ASPECT_ADJUST);
+                    gEXSetRectAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, G_EX_ORIGIN_NONE,
+                                   offset, 0, offset, 0);
+                }
                 gSPDisplayList(gRegionAllocPtr++, gMenuRenderModeResetDl);
                 if (gRaceOverlayRenderCallbackList != NULL) {
                     runRenderCallbacks(&gRaceOverlayRenderCallbackList);
@@ -311,6 +455,8 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
             }
 
             if (gViewportStates[gCurrentViewportIndex].overlayAlpha != 0) {
+                gEXSetRectAspect(gRegionAllocPtr++, G_EX_ASPECT_AUTO);
+                gEXSetRectAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, G_EX_ORIGIN_NONE, 0, 0, 0, 0);
                 gSPDisplayList(gRegionAllocPtr++, D_800DF098);
                 gDPSetPrimColor(
                     gRegionAllocPtr++,
@@ -337,6 +483,7 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
             }
 
             gRenderMatricesDirty = 0;
+            gEXSetRectAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, G_EX_ORIGIN_NONE, 0, 0, 0, 0);
         }
     }
 
@@ -344,6 +491,12 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
     gMenuViewportHeight = 208;
     gMenuViewportCenterX = 160;
     gMenuViewportCenterY = 120;
+
+    // Draw beneath the shared HUD so the meter, player markers, and countdown remain uninterrupted.
+    drawRaceViewportDividers();
+    gEXSetScissorAlign(gRegionAllocPtr++, G_EX_ORIGIN_LEFT, G_EX_ORIGIN_RIGHT,
+                      0, 0, -FRAMEBUFFER_WIDTH, 0, 0, 0, FRAMEBUFFER_WIDTH, FRAMEBUFFER_HEIGHT);
+    gEXSetRectAspect(gRegionAllocPtr++, splitFrame ? G_EX_ASPECT_ADJUST : G_EX_ASPECT_AUTO);
 
     if ((gMenuForegroundRenderCallbackList != NULL) || (gMenuRenderCallbackList != NULL)) {
         gDPSetScissor(gRegionAllocPtr++, G_SC_NON_INTERLACE, 0, 0, 320, 240);
@@ -361,6 +514,8 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
     gDPSetScissor(gRegionAllocPtr++, G_SC_NON_INTERLACE, 0, 0, 320, 240);
 
     if (gMenuFadeAlpha != 0) {
+        gEXSetRectAspect(gRegionAllocPtr++, G_EX_ASPECT_AUTO);
+        gEXSetRectAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, G_EX_ORIGIN_NONE, 0, 0, 0, 0);
         gSPDisplayList(gRegionAllocPtr++, D_800DF098);
         if (gMenuFadeOverlayActive != 0) {
             gDPSetPrimColor(gRegionAllocPtr++, 0, 0, 255, 255, 255, gMenuFadeAlpha);
@@ -381,6 +536,12 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
             1 << 10
         );
     }
+
+    // Frame setup can clear buffers before this function runs again; do not leak rectangle state into it.
+    gEXSetRectAspect(gRegionAllocPtr++, G_EX_ASPECT_AUTO);
+    gEXSetRectAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, G_EX_ORIGIN_NONE, 0, 0, 0, 0);
+    gEXSetScissorAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, G_EX_ORIGIN_NONE,
+                      0, 0, 0, 0, 0, 0, FRAMEBUFFER_WIDTH, FRAMEBUFFER_HEIGHT);
 }
 
 #undef runtimeModelRenderCallbackLists
