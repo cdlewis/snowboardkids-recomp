@@ -45,6 +45,10 @@ RECOMP_PATCH void initRaceSetupSaveMenu(void) {
         gRaceSetupSavePanelRects[1][i] = gRaceSetupSavePanelInitialRects[i][1];
     }
 
+    // @recomp Dismiss checking/check-complete pages for all players
+    gRaceSetupMenuSubState.state = 8;
+    gRaceSetupMenuSubState.alpha = 0;
+
     setCurrentGameTaskCallback(updateRaceSetupSaveMenu, 0);
     updateCallbackTasks();
 }
