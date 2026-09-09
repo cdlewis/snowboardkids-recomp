@@ -8,11 +8,10 @@
 #include "race_split_screen.h"
 
 extern s32 recomp_get_vertical_2p_split_screen_enabled(void);
-extern RaceCamera D_801121E0[RACE_CAMERA_COUNT];
 static s32 sVerticalTwoPlayerSplit;
 
 s32 raceUsesVerticalTwoPlayerSplit(void) {
-    return sVerticalTwoPlayerSplit && gPlayerCount == 2 && D_801121E0[0].initialized != 0;
+    return sVerticalTwoPlayerSplit && gPlayerCount == 2 && gRaceCameras[0].initialized.value != 0;
 }
 
 #define SCREEN_WIDTH 320
@@ -34,7 +33,7 @@ static f32 configureRaceSplitDirection(s32 index, s32 *x, s32 *y, u16 *width, u1
         sVerticalTwoPlayerSplit = gPlayerCount == 2 && recomp_get_vertical_2p_split_screen_enabled();
     }
     if (index >= 2 || !sVerticalTwoPlayerSplit || gPlayerCount != 2 ||
-        (!startingRace && D_801121E0[index].initialized == 0)) {
+        (!startingRace && gRaceCameras[index].initialized.value == 0)) {
         return fov;
     }
 

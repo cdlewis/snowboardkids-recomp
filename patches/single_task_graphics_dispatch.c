@@ -17,10 +17,6 @@ extern OSMesgQueue gFramebufferRenderDoneQueue;
 extern SchedulerState gSchedulerState;
 
 extern u8 D_369000[];
-extern u8 D_80360000[];
-extern u8 D_80368000[];
-extern u8 D_80368C00[];
-extern u8 D_800B1CC0[];
 
 extern void selectMenuRenderScratchBuffer(s32 frameIndex);
 extern void appendViewportDisplayLists(u8 frameIndex);
@@ -125,15 +121,15 @@ RECOMP_PATCH void submitFramebufferRenderTask(u8 frameIndex) {
     schedulerTask->rspTask.t.flags = 0;
     schedulerTask->rspTask.t.ucode_boot = (u64 *)rspbootTextStart;
     schedulerTask->rspTask.t.ucode_boot_size = (unsigned long)aspMainTextStart - (unsigned long)rspbootTextStart;
-    schedulerTask->rspTask.t.ucode = (u64 *)D_800B1CC0;
+    schedulerTask->rspTask.t.ucode = (u64 *)gF3dlxMicrocodeText;
     schedulerTask->rspTask.t.ucode_data = (u64 *)gspF3DLX_fifoDataStart;
     schedulerTask->rspTask.t.ucode_data_size = RSP_UCODE_DATA_SIZE;
-    schedulerTask->rspTask.t.dram_stack = (u64 *)D_80368C00;
+    schedulerTask->rspTask.t.dram_stack = (u64 *)gRspDramStack;
     schedulerTask->rspTask.t.dram_stack_size = RSP_DRAM_STACK_SIZE;
-    schedulerTask->rspTask.t.output_buff = (u64 *)D_80360000;
+    schedulerTask->rspTask.t.output_buff = (u64 *)gRspOutputBuffer;
     schedulerTask->rspTask.t.output_buff_size =
-        (u64 *)((unsigned long)D_80360000 + (long long)RSP_OUTPUT_BUFFER_SIZE);
-    schedulerTask->rspTask.t.yield_data_ptr = (u64 *)D_80368000;
+        (u64 *)((unsigned long)gRspOutputBuffer + (long long)RSP_OUTPUT_BUFFER_SIZE);
+    schedulerTask->rspTask.t.yield_data_ptr = (u64 *)gRspYieldBuffer;
     schedulerTask->rspTask.t.yield_data_size = RSP_YIELD_BUFFER_SIZE;
     schedulerTask->next = NULL;
     schedulerTask->flags = SCHEDULER_SWAPBUFFER_FLAG;

@@ -15,33 +15,7 @@ extern u8 gCurrentViewportIndex;
 
 extern Gfx gRacePlayerShadowRenderSetupDisplayList[];
 
-extern Gfx *gRacePlayerModelPart0DisplayLists[];
-extern Gfx *gRacePlayerModelPart1DisplayLists[];
-extern Gfx *gRacePlayerModelPart2DisplayLists[];
-extern Gfx *gRacePlayerModelPart3DisplayLists[];
-extern Gfx *gRacePlayerModelPart4DisplayLists[];
-extern Gfx *gRacePlayerModelPart5DisplayLists[];
-extern Gfx *gRacePlayerModelPart6DisplayLists[];
-extern Gfx *gRacePlayerModelPart7DisplayLists[];
-extern Gfx *gRacePlayerModelPart8DisplayLists[];
-extern Gfx *gRacePlayerModelPart9DisplayLists[];
-extern Gfx *gRacePlayerModelPart10DisplayLists[];
-extern Gfx *gRacePlayerModelPart11DisplayLists[];
-extern Gfx *gRacePlayerModelPart12DisplayLists[];
 
-extern Gfx *gRaceGhostPlayerModelPart0DisplayLists[];
-extern Gfx *gRaceGhostPlayerModelPart1DisplayLists[];
-extern Gfx *gRaceGhostPlayerModelPart2DisplayLists[];
-extern Gfx *gRaceGhostPlayerModelPart3DisplayLists[];
-extern Gfx *gRaceGhostPlayerModelPart4DisplayLists[];
-extern Gfx *gRaceGhostPlayerModelPart5DisplayLists[];
-extern Gfx *gRaceGhostPlayerModelPart6DisplayLists[];
-extern Gfx *gRaceGhostPlayerModelPart7DisplayLists[];
-extern Gfx *gRaceGhostPlayerModelPart8DisplayLists[];
-extern Gfx *gRaceGhostPlayerModelPart9DisplayLists[];
-extern Gfx *gRaceGhostPlayerModelPart10DisplayLists[];
-extern Gfx *gRaceGhostPlayerModelPart11DisplayLists[];
-extern Gfx *gRaceGhostPlayerModelPart12DisplayLists[];
 
 static Gfx **const gRacePlayerModelPartDisplayLists[] = {
     gRacePlayerModelPart0DisplayLists,  gRacePlayerModelPart1DisplayLists,  gRacePlayerModelPart2DisplayLists,

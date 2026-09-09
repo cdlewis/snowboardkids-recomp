@@ -13,8 +13,6 @@
 extern u8 gCurrentViewportIndex;
 extern const char gRaceHudTwoPlayerScoreFormat[];
 extern s16 gRaceHudCoinSpinnerFrame;
-extern u8 gRaceTimerTensDigitTileOffsets[8];
-extern u8 gRaceTimerOnesDigitTileIds[8];
 extern s16 gRaceLapCount;
 extern Gfx *gRegionAllocPtr;
 extern f32 recomp_get_target_hud_aspect_ratio(f32 original);
@@ -91,7 +89,7 @@ RECOMP_PATCH void drawTwoPlayerRaceHud(void *arg0) {
             vertical ? 8 : -0x88,
             vertical ? -96 : -0x30,
             getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
-            gRaceTimerTensDigitTileOffsets[gRacePlayers[gCurrentViewportIndex].itemEffectType] +
+            gRaceHudItemEffectTileOffsets[gRacePlayers[gCurrentViewportIndex].itemEffectType] +
                 gRacePlayers[gCurrentViewportIndex].itemEffectCount - 1,
             gRacePlayers[gCurrentViewportIndex].itemEffectPalette
         );
@@ -100,7 +98,7 @@ RECOMP_PATCH void drawTwoPlayerRaceHud(void *arg0) {
             vertical ? 8 : -0x88,
             vertical ? -96 : -0x30,
             getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
-            gRaceTimerTensDigitTileOffsets[gRacePlayers[gCurrentViewportIndex].itemEffectType] +
+            gRaceHudItemEffectTileOffsets[gRacePlayers[gCurrentViewportIndex].itemEffectType] +
                 gRacePlayers[gCurrentViewportIndex].itemEffectCount - 1
         );
     }
@@ -110,7 +108,7 @@ RECOMP_PATCH void drawTwoPlayerRaceHud(void *arg0) {
             vertical ? 40 : -0x68,
             vertical ? -96 : -0x30,
             getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
-            gRaceTimerOnesDigitTileIds[gRacePlayers[gCurrentViewportIndex].actionEffectType],
+            gRaceHudActionEffectTileIds[gRacePlayers[gCurrentViewportIndex].actionEffectType],
             gRacePlayers[gCurrentViewportIndex].actionEffectPalette
         );
     } else {
@@ -118,7 +116,7 @@ RECOMP_PATCH void drawTwoPlayerRaceHud(void *arg0) {
             vertical ? 40 : -0x68,
             vertical ? -96 : -0x30,
             getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
-            gRaceTimerOnesDigitTileIds[gRacePlayers[gCurrentViewportIndex].actionEffectType]
+            gRaceHudActionEffectTileIds[gRacePlayers[gCurrentViewportIndex].actionEffectType]
         );
     }
 

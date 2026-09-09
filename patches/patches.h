@@ -41,14 +41,8 @@
 #include "rt64_extended_gbi.h"
 #include "PR/ucode.h"
 
-// Decompilation headers.
-//
-// Do not add PR/os_pi.h or PR/os_message.h here. The decompilation defines its own
-// OSMesg / OSMesgQueue / OSIoMesg in game/audio/audio_engine.h and its translation
-// units hand-declare the libultra functions they need rather than including those
-// headers; pulling both in produces conflicting typedefs. game/engine/system_runtime.h
-// is likewise excluded because it declares `void main(void *)`, which C rejects.
 #include "game/audio/audio_engine.h"
+#include "game/engine/system_runtime.h"
 #include "game/engine/frame_render_task.h"
 
 // Native helpers backed by src/game/recomp_api.cpp; see patches/syms.ld.

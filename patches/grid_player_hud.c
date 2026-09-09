@@ -13,8 +13,6 @@ extern Gfx *gRegionAllocPtr;
 extern u8 gCurrentViewportIndex;
 extern s16 gRaceHudCoinSpinnerFrame;
 extern s16 gRaceLapCount;
-extern u8 gRaceTimerTensDigitTileOffsets[8];
-extern u8 gRaceTimerOnesDigitTileIds[8];
 extern const char gRaceHudMultiplayerScoreFormat[];
 
 static void anchorGridHudGroup(s32 side) {
@@ -49,7 +47,7 @@ RECOMP_PATCH void drawMultiplayerRaceHud(void *arg0) {
         0x20,
         -0x38,
         texture,
-        gRaceTimerTensDigitTileOffsets[gRacePlayers[gCurrentViewportIndex].itemEffectType] +
+        gRaceHudItemEffectTileOffsets[gRacePlayers[gCurrentViewportIndex].itemEffectType] +
             gRacePlayers[gCurrentViewportIndex].itemEffectCount - 1,
         player->itemEffectPalette + 1
     );
@@ -60,7 +58,7 @@ RECOMP_PATCH void drawMultiplayerRaceHud(void *arg0) {
         0x30,
         -0x38,
         texture,
-        gRaceTimerOnesDigitTileIds[player->actionEffectType],
+        gRaceHudActionEffectTileIds[player->actionEffectType],
         player->actionEffectPalette + 1
     );
 

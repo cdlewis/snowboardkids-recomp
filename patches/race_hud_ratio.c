@@ -21,8 +21,6 @@ extern Gfx *gRegionAllocPtr;
 extern const char gRaceHudSinglePlayerScoreFormat[];
 extern s16 gRaceHudCoinSpinnerFrame;
 extern s16 gRaceHudMode;
-extern u8 gRaceTimerTensDigitTileOffsets[8];
-extern u8 gRaceTimerOnesDigitTileIds[8];
 extern s16 gRaceLapCount;
 extern u16 gRaceProgressMeterIconTiles[36];
 extern u16 gRaceProgressMeterIconPalettes[6];
@@ -98,7 +96,7 @@ RECOMP_PATCH void drawSinglePlayerRaceHud(void *arg0) {
             -0x20,
             -0x60,
             getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
-            gRaceTimerTensDigitTileOffsets[gRacePlayers[0].itemEffectType] + gRacePlayers[0].itemEffectCount - 1,
+            gRaceHudItemEffectTileOffsets[gRacePlayers[0].itemEffectType] + gRacePlayers[0].itemEffectCount - 1,
             gRacePlayers[0].itemEffectPalette
         );
     } else {
@@ -106,7 +104,7 @@ RECOMP_PATCH void drawSinglePlayerRaceHud(void *arg0) {
             -0x20,
             -0x60,
             getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
-            gRaceTimerTensDigitTileOffsets[gRacePlayers[0].itemEffectType] + gRacePlayers[0].itemEffectCount - 1
+            gRaceHudItemEffectTileOffsets[gRacePlayers[0].itemEffectType] + gRacePlayers[0].itemEffectCount - 1
         );
     }
 
@@ -115,7 +113,7 @@ RECOMP_PATCH void drawSinglePlayerRaceHud(void *arg0) {
             0,
             -0x60,
             getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
-            gRaceTimerOnesDigitTileIds[gRacePlayers[0].actionEffectType],
+            gRaceHudActionEffectTileIds[gRacePlayers[0].actionEffectType],
             gRacePlayers[0].actionEffectPalette
         );
     } else {
@@ -123,7 +121,7 @@ RECOMP_PATCH void drawSinglePlayerRaceHud(void *arg0) {
             0,
             -0x60,
             getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
-            gRaceTimerOnesDigitTileIds[gRacePlayers[0].actionEffectType]
+            gRaceHudActionEffectTileIds[gRacePlayers[0].actionEffectType]
         );
     }
 
@@ -157,7 +155,7 @@ RECOMP_PATCH void drawSinglePlayerRaceHud(void *arg0) {
     hudEndAnchoredDraw();
 }
 
-RECOMP_PATCH void drawThreePlayerHudDivider(void *arg0) {
+RECOMP_PATCH void drawThreePlayerNoEntryPanel(void *arg0) {
     f32 scale = recomp_get_target_aspect_ratio(4.0f / 3.0f) / (4.0f / 3.0f);
     s32 offset = (s32)((HUD_SCREEN_WIDTH / 4) * (scale - 1.0f) * 4.0f + 0.5f);
 

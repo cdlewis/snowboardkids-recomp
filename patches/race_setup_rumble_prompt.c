@@ -4,28 +4,6 @@
 #include "game/engine/render_callback.h"
 #include "game/menu/controller_pak/controller_pak_ui.h"
 
-typedef struct {
-    s16 pad0;
-    u8 state;
-    u8 pad3;
-    u16 targetScale;
-    u16 timer;
-    u8 selectedOption;
-    u8 confirmSelection;
-} ControllerPakRumbleCheckPromptTransition;
-
-typedef struct {
-    u8 state;
-    u8 pad1;
-    u16 targetScale;
-    u16 timer;
-    u8 selectedOption;
-    u8 confirmSelection;
-} ControllerPakRumbleCheckPromptState;
-
-extern ControllerPakRumbleCheckPromptTransition gControllerPakRumbleCheckPromptTransition;
-extern ControllerPakRumbleCheckPromptState gControllerPakRumbleCheckPromptState;
-
 RECOMP_PATCH void updateControllerPakRumbleCheckPrompt(ControllerPakRumbleCheckPromptActor *arg0) {
     u8 state;
     u8 globalState;
@@ -49,7 +27,7 @@ RECOMP_PATCH void updateControllerPakRumbleCheckPrompt(ControllerPakRumbleCheckP
         if (1) {}
         if (1) {}
         if (1) {}
-        arg0->targetScale = gControllerPakRumbleCheckPromptTransition.targetScale;
+        arg0->messageIndex = gControllerPakRumbleCheckPromptTransition.messageIndex;
         arg0->timer = 0;
         arg0->optionScale = 0x100; state = globalState;
     }

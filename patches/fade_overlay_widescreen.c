@@ -30,24 +30,18 @@ extern RenderCallbackNode *gModelRenderCallbackList;
 extern RenderCallbackNode *gEffectRenderCallbackList;
 extern RenderCallbackNode *D_80124848;
 
-extern Vp D_800DEF18[];
-extern Gfx D_800DEF28[];
-extern Gfx D_800DEF90[];
-extern Gfx D_800DF098[];
 extern Gfx gMenuRenderModeResetDl[];
-extern RaceCamera D_801121E0[RACE_CAMERA_COUNT];
 extern FrameRenderTask gFrameRenderTasks[];
 
 extern void runRenderCallbacks(RenderCallbackNode **list);
 extern void appendFadeOverlayDisplayList(void);
 extern void initMenuAsciiFontTexture(void);
 
-#define runtimeModelRenderCallbackLists (*(RenderCallbackNode * (*)[24]) & gModelRenderCallbackList)
 #define VIEWPORT_COUNT 4
 
 static s32 raceViewportUsesColumns(s32 index) {
     ViewportState *viewport = &gViewportStates[index];
-    return D_801121E0[index].initialized != 0 && viewport->screenBoundsValid != 0 &&
+    return gRaceCameras[index].initialized.value != 0 && viewport->screenBoundsValid != 0 &&
            viewport->right - viewport->left <= FRAMEBUFFER_WIDTH / 2;
 }
 
@@ -97,7 +91,7 @@ static void drawRaceViewportDividers(void) {
     }
 
     for (i = 0; i < VIEWPORT_COUNT; i++) {
-        if (D_801121E0[i].initialized != 0 && gViewportStates[i].screenBoundsValid != 0) {
+        if (gRaceCameras[i].initialized.value != 0 && gViewportStates[i].screenBoundsValid != 0) {
             viewportCount++;
         }
     }
@@ -163,7 +157,7 @@ static void pushViewportProjectionMatrixGroup(u32 base) {
     u32 id = base | gCurrentViewportIndex;
     u32 aspect = raceViewportUsesColumns(gCurrentViewportIndex) ? G_EX_ASPECT_ADJUST : G_EX_ASPECT_AUTO;
 
-    if (D_801121E0[gCurrentViewportIndex].initialized != 0) {
+    if (gRaceCameras[gCurrentViewportIndex].initialized.value != 0) {
         id |= PROJECTION_VIEWPORT_RACE_CONTEXT_BIT;
     }
 
@@ -205,7 +199,7 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
     gDPSetScissor(
         gRegionAllocPtr++, G_SC_NON_INTERLACE, 0, 0, FRAMEBUFFER_WIDTH, FRAMEBUFFER_HEIGHT
     );
-    gSPViewport(gRegionAllocPtr++, D_800DEF18);
+    gSPViewport(gRegionAllocPtr++, gFullscreenOverlayViewport);
 
     if (gMenuOverlayRenderCallbackList != NULL) {
         gSPDisplayList(gRegionAllocPtr++, gMenuRenderModeResetDl);
@@ -240,7 +234,7 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
             gMenuViewportCenterY = top + (gMenuViewportHeight / 2);
 
             gCurrentFrameRenderData->viewport.viewportMatrices[gCurrentViewportIndex] =
-                D_801121E0[gCurrentViewportIndex].packedTransform;
+                gRaceCameras[gCurrentViewportIndex].packedTransform;
             gCurrentFrameRenderData->viewport.viewportMatrices[gCurrentViewportIndex].m[1][2] = 0;
             gCurrentFrameRenderData->viewport.viewportMatrices[gCurrentViewportIndex].m[1][3] = 1;
             gCurrentFrameRenderData->viewport.viewportMatrices[gCurrentViewportIndex].m[3][2] = 0;
@@ -324,46 +318,46 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
             }
 
             gCurrentFrameRenderData->viewport.rotations[gCurrentViewportIndex].m[0][0] =
-                ((D_801121E0[gCurrentViewportIndex].cameraTransform.rotation[0] << 4) & upperMask) |
-                ((D_801121E0[gCurrentViewportIndex].cameraTransform.rotation[1] >> 12) & 0xFFFF);
+                ((gRaceCameras[gCurrentViewportIndex].cameraTransform.rotation[0] << 4) & upperMask) |
+                ((gRaceCameras[gCurrentViewportIndex].cameraTransform.rotation[1] >> 12) & 0xFFFF);
             gCurrentFrameRenderData->viewport.rotations[gCurrentViewportIndex].m[0][1] =
-                (D_801121E0[gCurrentViewportIndex].cameraTransform.rotation[2] << 4) & upperMask;
+                (gRaceCameras[gCurrentViewportIndex].cameraTransform.rotation[2] << 4) & upperMask;
             gCurrentFrameRenderData->viewport.rotations[gCurrentViewportIndex].m[0][2] =
-                ((D_801121E0[gCurrentViewportIndex].cameraTransform.rotation[3] << 4) & upperMask) |
-                ((D_801121E0[gCurrentViewportIndex].cameraTransform.rotation[4] >> 12) & 0xFFFF);
+                ((gRaceCameras[gCurrentViewportIndex].cameraTransform.rotation[3] << 4) & upperMask) |
+                ((gRaceCameras[gCurrentViewportIndex].cameraTransform.rotation[4] >> 12) & 0xFFFF);
             gCurrentFrameRenderData->viewport.rotations[gCurrentViewportIndex].m[0][3] =
-                (D_801121E0[gCurrentViewportIndex].cameraTransform.rotation[5] << 4) & upperMask;
+                (gRaceCameras[gCurrentViewportIndex].cameraTransform.rotation[5] << 4) & upperMask;
             gCurrentFrameRenderData->viewport.rotations[gCurrentViewportIndex].m[1][0] =
-                ((D_801121E0[gCurrentViewportIndex].cameraTransform.rotation[6] << 4) & upperMask) |
-                ((D_801121E0[gCurrentViewportIndex].cameraTransform.rotation[7] >> 12) & 0xFFFF);
+                ((gRaceCameras[gCurrentViewportIndex].cameraTransform.rotation[6] << 4) & upperMask) |
+                ((gRaceCameras[gCurrentViewportIndex].cameraTransform.rotation[7] >> 12) & 0xFFFF);
             gCurrentFrameRenderData->viewport.rotations[gCurrentViewportIndex].m[1][1] =
-                (D_801121E0[gCurrentViewportIndex].cameraTransform.rotation[8] << 4) & upperMask;
+                (gRaceCameras[gCurrentViewportIndex].cameraTransform.rotation[8] << 4) & upperMask;
             gCurrentFrameRenderData->viewport.translations[gCurrentViewportIndex].m[1][2] =
-                (D_801121E0[gCurrentViewportIndex].cameraTransform.translation.x & upperMask) |
-                ((D_801121E0[gCurrentViewportIndex].cameraTransform.translation.y >> 16) & 0xFFFF);
+                (gRaceCameras[gCurrentViewportIndex].cameraTransform.translation.x & upperMask) |
+                ((gRaceCameras[gCurrentViewportIndex].cameraTransform.translation.y >> 16) & 0xFFFF);
             gCurrentFrameRenderData->viewport.translations[gCurrentViewportIndex].m[1][3] =
-                (D_801121E0[gCurrentViewportIndex].cameraTransform.translation.z & upperMask) | 1;
+                (gRaceCameras[gCurrentViewportIndex].cameraTransform.translation.z & upperMask) | 1;
 
             gCurrentFrameRenderData->viewport.rotations[gCurrentViewportIndex].m[2][0] =
-                ((D_801121E0[gCurrentViewportIndex].cameraTransform.rotation[0] << 20) & upperMask) |
-                ((D_801121E0[gCurrentViewportIndex].cameraTransform.rotation[1] << 4) & 0xFFFF);
+                ((gRaceCameras[gCurrentViewportIndex].cameraTransform.rotation[0] << 20) & upperMask) |
+                ((gRaceCameras[gCurrentViewportIndex].cameraTransform.rotation[1] << 4) & 0xFFFF);
             gCurrentFrameRenderData->viewport.rotations[gCurrentViewportIndex].m[2][1] =
-                (D_801121E0[gCurrentViewportIndex].cameraTransform.rotation[2] << 20) & upperMask;
+                (gRaceCameras[gCurrentViewportIndex].cameraTransform.rotation[2] << 20) & upperMask;
             gCurrentFrameRenderData->viewport.rotations[gCurrentViewportIndex].m[2][2] =
-                ((D_801121E0[gCurrentViewportIndex].cameraTransform.rotation[3] << 20) & upperMask) |
-                ((D_801121E0[gCurrentViewportIndex].cameraTransform.rotation[4] << 4) & 0xFFFF);
+                ((gRaceCameras[gCurrentViewportIndex].cameraTransform.rotation[3] << 20) & upperMask) |
+                ((gRaceCameras[gCurrentViewportIndex].cameraTransform.rotation[4] << 4) & 0xFFFF);
             gCurrentFrameRenderData->viewport.rotations[gCurrentViewportIndex].m[2][3] =
-                (D_801121E0[gCurrentViewportIndex].cameraTransform.rotation[5] << 20) & upperMask;
+                (gRaceCameras[gCurrentViewportIndex].cameraTransform.rotation[5] << 20) & upperMask;
             gCurrentFrameRenderData->viewport.rotations[gCurrentViewportIndex].m[3][0] =
-                ((D_801121E0[gCurrentViewportIndex].cameraTransform.rotation[6] << 20) & upperMask) |
-                ((D_801121E0[gCurrentViewportIndex].cameraTransform.rotation[7] << 4) & 0xFFFF);
+                ((gRaceCameras[gCurrentViewportIndex].cameraTransform.rotation[6] << 20) & upperMask) |
+                ((gRaceCameras[gCurrentViewportIndex].cameraTransform.rotation[7] << 4) & 0xFFFF);
             gCurrentFrameRenderData->viewport.rotations[gCurrentViewportIndex].m[3][1] =
-                (D_801121E0[gCurrentViewportIndex].cameraTransform.rotation[8] << 20) & upperMask;
+                (gRaceCameras[gCurrentViewportIndex].cameraTransform.rotation[8] << 20) & upperMask;
             gCurrentFrameRenderData->viewport.translations[gCurrentViewportIndex].m[3][2] =
-                ((D_801121E0[gCurrentViewportIndex].cameraTransform.translation.x << 16) & upperMask) |
-                (D_801121E0[gCurrentViewportIndex].cameraTransform.translation.y & 0xFFFF);
+                ((gRaceCameras[gCurrentViewportIndex].cameraTransform.translation.x << 16) & upperMask) |
+                (gRaceCameras[gCurrentViewportIndex].cameraTransform.translation.y & 0xFFFF);
             gCurrentFrameRenderData->viewport.translations[gCurrentViewportIndex].m[3][3] =
-                (D_801121E0[gCurrentViewportIndex].cameraTransform.translation.z << 16) & upperMask;
+                (gRaceCameras[gCurrentViewportIndex].cameraTransform.translation.z << 16) & upperMask;
 
             if (gBackdropRenderCallbackList != NULL) {
                 pushViewportProjectionMatrixGroup(PROJECTION_VIEWPORT_BACKDROP_ID_BASE);
@@ -387,13 +381,13 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
                     &gCurrentFrameRenderData->viewport.translations[gCurrentViewportIndex],
                     G_MTX_NOPUSH | G_MTX_MUL | G_MTX_PROJECTION
                 );
-                gSPDisplayList(gRegionAllocPtr++, D_800DEF90);
+                gSPDisplayList(gRegionAllocPtr++, gBackdropRenderSetupDisplayList);
                 runRenderCallbacks(&gBackdropRenderCallbackList);
                 gEXPopMatrixGroup(gRegionAllocPtr++, G_MTX_PROJECTION);
             }
 
-            for (i = 0; i < 24; i += 3) {
-                if (runtimeModelRenderCallbackLists[i] != NULL) {
+            for (i = 0; i < MODEL_RENDER_CALLBACK_QUEUE_COUNT; i++) {
+                if (gModelRenderCallbackQueues[i].head != NULL) {
                     hasModelCallbacks = 1;
                 }
             }
@@ -417,11 +411,11 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
                     &gCurrentFrameRenderData->viewport.translations[gCurrentViewportIndex],
                     G_MTX_NOPUSH | G_MTX_MUL | G_MTX_PROJECTION
                 );
-                gSPDisplayList(gRegionAllocPtr++, D_800DEF28);
+                gSPDisplayList(gRegionAllocPtr++, gModelRenderSetupDisplayList);
 
-                for (i = 0; i < 24; i += 3) {
-                    if (runtimeModelRenderCallbackLists[i] != NULL) {
-                        queue = &runtimeModelRenderCallbackLists[i];
+                for (i = 0; i < MODEL_RENDER_CALLBACK_QUEUE_COUNT; i++) {
+                    if (gModelRenderCallbackQueues[i].head != NULL) {
+                        queue = &gModelRenderCallbackQueues[i].head;
                         if (queue == &gEffectRenderCallbackList) {
                             gSPMatrix(
                                 gRegionAllocPtr++,
@@ -457,7 +451,7 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
             if (gViewportStates[gCurrentViewportIndex].overlayAlpha != 0) {
                 gEXSetRectAspect(gRegionAllocPtr++, G_EX_ASPECT_AUTO);
                 gEXSetRectAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, G_EX_ORIGIN_NONE, 0, 0, 0, 0);
-                gSPDisplayList(gRegionAllocPtr++, D_800DF098);
+                gSPDisplayList(gRegionAllocPtr++, gTranslucentOverlaySetupDisplayList);
                 gDPSetPrimColor(
                     gRegionAllocPtr++,
                     0,
@@ -516,7 +510,7 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
     if (gMenuFadeAlpha != 0) {
         gEXSetRectAspect(gRegionAllocPtr++, G_EX_ASPECT_AUTO);
         gEXSetRectAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, G_EX_ORIGIN_NONE, 0, 0, 0, 0);
-        gSPDisplayList(gRegionAllocPtr++, D_800DF098);
+        gSPDisplayList(gRegionAllocPtr++, gTranslucentOverlaySetupDisplayList);
         if (gMenuFadeOverlayActive != 0) {
             gDPSetPrimColor(gRegionAllocPtr++, 0, 0, 255, 255, 255, gMenuFadeAlpha);
         } else {
@@ -544,5 +538,4 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
                       0, 0, 0, 0, 0, 0, FRAMEBUFFER_WIDTH, FRAMEBUFFER_HEIGHT);
 }
 
-#undef runtimeModelRenderCallbackLists
 #undef VIEWPORT_COUNT

@@ -4,6 +4,7 @@
 #include "game/engine/callback_task_scheduler.h"
 #include "game/engine/game_task_scheduler.h"
 #include "game/menu/main_menu/controller_main_menu_flow.h"
+#include "game/menu/menu_scratch.h"
 #include "game/menu/race_setup/race_setup_menu.h"
 #include "game/menu/race_setup/race_setup_ui.h"
 #include "game/race/player/race_player_input.h"
@@ -14,8 +15,6 @@ extern void recomp_set_game_player_count(u32 playerCount);
 extern u8 gConnectedControllerCount;
 extern u8 gMainMenuReturnFromRace;
 extern s32 gMenuFlowState;
-extern CallbackTask *D_8010ADE0;
-extern CallbackTask *D_8010ADE4;
 extern s16 gRaceSetupSavePanelInitialRects[4][2];
 
 RECOMP_PATCH void initRaceSetupSaveMenu(void) {
@@ -34,8 +33,8 @@ RECOMP_PATCH void initRaceSetupSaveMenu(void) {
     }
 
     gRaceSetupSavePanelCreateTimer = 0;
-    do { i = 0; connectedControllerCount = gConnectedControllerCount; if (connectedControllerCount > 0) { player = gRacePlayers; do { player++; player[-1].menuState = 0; i++; } while (player < &gRacePlayers[connectedControllerCount]); i = 0; } do { initRaceSetupPlayerSaveData(i); i++; } while (i < 4); D_8010ADE0 = 0; D_8010ADE4 = 0; } while (0);
-    D_8010ADE8 = 0;
+    do { i = 0; connectedControllerCount = gConnectedControllerCount; if (connectedControllerCount > 0) { player = gRacePlayers; do { player++; player[-1].menuState = 0; i++; } while (player < &gRacePlayers[connectedControllerCount]); i = 0; } do { initRaceSetupPlayerSaveData(i); i++; } while (i < 4); gMenuScratch0.task = 0; gMenuScratch1.task = 0; } while (0);
+    gMenuScratch2.task = 0;
     gMenuSelectionConfirmTimer = 0;
     gMenuFlowState = 0;
     gRaceRumbleEnabled = 0;
