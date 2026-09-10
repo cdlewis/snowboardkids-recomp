@@ -1,4 +1,5 @@
 #include "patches.h"
+#include "game/ending/ending_credits_flow.h"
 #include "game/engine/viewport_manager.h"
 #include "PR/gu.h"
 #include "game/engine/game_task_scheduler.h"
@@ -176,6 +177,9 @@ RECOMP_PATCH void configureViewportWithFovAndFarClip(
     s16 fovY,
     s32 farClip
 ) {
+    s32 endingCredits = gCurrentGameTask != NULL &&
+                        gCurrentGameTask->callbacks[0] == initEndingCreditsFlow;
+
     gViewportStates[viewportIndex].active = 1;
     gViewportStates[viewportIndex].viewport.vp.vtrans[0] = centerX * 4;
     gViewportStates[viewportIndex].viewport.vp.vtrans[1] = centerY * 4;
@@ -218,8 +222,11 @@ RECOMP_PATCH void configureViewportWithFovAndFarClip(
         gViewportStates[viewportIndex].bottom = 0xF0;
     }
 
-    // @recomp Expand near-edge bounds and recenter the rendered viewport to match them.
-    snapViewportBoundsToScreenEdges(&gViewportStates[viewportIndex]);
+    // @recomp The ending credits use their 16-pixel inset to clip characters as they enter and leave the scene.
+    // Preserve that authored pillarbox instead of exposing the off-screen animation in widescreen.
+    if (!endingCredits) {
+        snapViewportBoundsToScreenEdges(&gViewportStates[viewportIndex]);
+    }
    
     guPerspective(
         &gViewportStates[viewportIndex].projectionMatrix,
