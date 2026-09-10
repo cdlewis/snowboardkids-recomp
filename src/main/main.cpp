@@ -45,6 +45,7 @@
 #include "librecomp/mods.hpp"
 #include "librecomp/helpers.hpp"
 
+#include "mods/snowboardkids_mod_template.h"
 #include "sk1_game_version.h"
 #include "sk1_launcher.h"
 #include "recomp_theme.h"
@@ -821,6 +822,10 @@ int main(int argc, char** argv) {
     for (const auto& game : supported_games) {
         recomp::register_game(game);
     }
+
+    recomp::mods::register_embedded_mod(
+        "snowboardkids_mod_template",
+        { reinterpret_cast<const uint8_t*>(snowboardkids_mod_template), snowboardkids_mod_template_size });
 
     REGISTER_FUNC(recomp_get_target_aspect_ratio);
     REGISTER_FUNC(recomp_get_target_hud_aspect_ratio);
