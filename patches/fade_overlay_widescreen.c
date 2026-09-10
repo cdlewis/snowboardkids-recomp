@@ -178,10 +178,12 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
     s16 top;
     s32 i;
     s32 splitFrame = 0;
+    s32 raceFrame = 0;
     f32 aspectScale = recomp_get_target_aspect_ratio(4.0f / 3.0f) / (4.0f / 3.0f);
 
     for (i = 0; i < VIEWPORT_COUNT; i++) {
         splitFrame |= raceViewportUsesColumns(i);
+        raceFrame |= gRaceCameras[i].initialized.value != 0 && gViewportStates[i].screenBoundsValid != 0;
     }
 
     gUiBlinkTimer++;
@@ -493,7 +495,16 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
     gEXSetRectAspect(gRegionAllocPtr++, splitFrame ? G_EX_ASPECT_ADJUST : G_EX_ASPECT_AUTO);
 
     if ((gMenuForegroundRenderCallbackList != NULL) || (gMenuRenderCallbackList != NULL)) {
-        gDPSetScissor(gRegionAllocPtr++, G_SC_NON_INTERLACE, 0, 0, 320, 240);
+        if (!raceFrame) {
+            // @recomp Match the sprite helpers' horizontal menu bounds. Hidden paint-menu
+            // panels can otherwise leave a border fragment in the 16-pixel side margin.
+            gEXSetScissorAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, G_EX_ORIGIN_NONE,
+                              0, 0, 0, 0, 0, 0, FRAMEBUFFER_WIDTH, FRAMEBUFFER_HEIGHT);
+        }
+        gDPSetScissor(gRegionAllocPtr++, G_SC_NON_INTERLACE,
+                      raceFrame ? 0 : gMenuViewportCenterX - gMenuViewportWidth / 2, 0,
+                      raceFrame ? FRAMEBUFFER_WIDTH : gMenuViewportCenterX + gMenuViewportWidth / 2,
+                      FRAMEBUFFER_HEIGHT);
         gSPDisplayList(gRegionAllocPtr++, gMenuRenderModeResetDl);
         if (gMenuRenderCallbackList != NULL) {
             runRenderCallbacks(&gMenuRenderCallbackList);
@@ -501,6 +512,12 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
         if (gMenuForegroundRenderCallbackList != NULL) {
             initMenuAsciiFontTexture();
             runRenderCallbacks(&gMenuForegroundRenderCallbackList);
+        }
+        if (!raceFrame) {
+            // @recomp Restore wide alignment only after the menu pass changed it.
+            // The following scissor then lets fades cover the full output.
+            gEXSetScissorAlign(gRegionAllocPtr++, G_EX_ORIGIN_LEFT, G_EX_ORIGIN_RIGHT,
+                              0, 0, -FRAMEBUFFER_WIDTH, 0, 0, 0, FRAMEBUFFER_WIDTH, FRAMEBUFFER_HEIGHT);
         }
     }
 
