@@ -7,6 +7,7 @@
 #include "game/race/player/race_player_input.h"
 #include "game/race/flow/race_flow.h"
 #include "race_split_screen.h"
+#include "podium_scene.h"
 
 extern s32 recomp_get_vertical_2p_split_screen_enabled(void);
 static s32 sVerticalTwoPlayerSplit;
@@ -100,6 +101,12 @@ RECOMP_PATCH void configureViewport(
 ) {
     f32 fov = configureRaceSplitDirection(viewportIndex, &centerX, &centerY, &width, &height,
                                          &scaleX, &scaleY, &aspect);
+    if (isPodiumViewport(viewportIndex)) {
+        // Reveal the top and bottom of the pass-award scene without changing its
+        // projection, camera, or the authored size and position of its text.
+        width = SCREEN_WIDTH;
+        height = SCREEN_HEIGHT;
+    }
     gViewportStates[viewportIndex].active = 1;
     gViewportStates[viewportIndex].viewport.vp.vtrans[0] = centerX * 4;
     gViewportStates[viewportIndex].viewport.vp.vtrans[1] = centerY * 4;

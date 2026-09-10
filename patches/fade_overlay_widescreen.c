@@ -2,6 +2,7 @@
 
 #include "transform_ids.h"
 #include "race_split_screen.h"
+#include "podium_scene.h"
 
 #include "game/engine/render_callback.h"
 #include "game/engine/viewport_manager.h"
@@ -65,7 +66,8 @@ static void setViewportScissorAlignment(s32 index) {
 
 static void emitRaceViewport(void) {
     Vp *viewport = &gCurrentFrameRenderData->viewport.viewports[gCurrentViewportIndex];
-    if (raceViewportUsesColumns(gCurrentViewportIndex)) {
+    if (raceViewportUsesColumns(gCurrentViewportIndex) ||
+        (gCurrentViewportIndex == 2 && isPodiumViewport(gCurrentViewportIndex))) {
         gEXViewport(gRegionAllocPtr++, G_EX_ORIGIN_CENTER, viewport);
     } else {
         gSPViewport(gRegionAllocPtr++, viewport);
@@ -222,6 +224,13 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
                 // SBK2 widens a frame-local viewport and submits its centre relative to the output centre.
                 viewport->vp.vscale[0] = (s16)(viewport->vp.vscale[0] * aspectScale + 0.5f);
                 viewport->vp.vtrans[0] = (s16)(center + (center < 0.0f ? -0.5f : 0.5f));
+            } else if (gCurrentViewportIndex == 2 && isPodiumViewport(gCurrentViewportIndex)) {
+                // The rotating congratulations banner and its afterimages use
+                // viewport 2 before becoming a centred 2D sprite. Keep this
+                // overlay viewport at native aspect so the handoff cannot change
+                // the banner's width. Viewports 0 and 1 still widen the scene.
+                gCurrentFrameRenderData->viewport.viewports[gCurrentViewportIndex].vp.vtrans[0] -=
+                    FRAMEBUFFER_WIDTH * 2;
             }
             gCurrentFrameRenderData->viewport.projections[gCurrentViewportIndex] =
                 gViewportStates[gCurrentViewportIndex].projectionMatrix;
