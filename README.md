@@ -2,7 +2,7 @@
 
 [Snowboard Kids: Recompiled](https://github.com/cdlewis/snowboardkids-recomp) is a project that uses [N64: Recompiled](https://github.com/Mr-Wiseguy/N64Recomp) to **statically recompile** Snowboard Kids into a native port with many new features, enhancements, and extensive mod support. This project uses [RT64](https://github.com/rt64/rt64) as the rendering engine to provide some of these enhancements.
 
-### [Download the latest release here](https://github.com/cdlewis/snowboardkids-recomp/releases/latest).
+### [Download the latest release here](https://github.com/cdlewis/snowboardkids-recomp/releases/latest)
 
 Join the [N64: Recompiled Community Discord](https://discord.gg/AWZThJ4dPf) to discuss this and other N64: Recompiled projects!
 
@@ -71,7 +71,7 @@ Any aspect ratio is supported, with most effects modded to work correctly in wid
 
 Install community made mods and texture packs! Mods can change any part of the game, including adding completely new features and content. You can install mods by simply dragging the mod files onto the game window before starting the game or by clicking the **Install Mods** button in the mod menu. Mods can be toggled in the mod menu, and some mods can be configured there as well.
 
-If you're interested in making mods for this project, check out [the mod template](https://github.com/cdlewis/snowboardkids2-recomp-mod-template) and [the modding documentation](https://hackmd.io/fMDiGEJ9TBSjomuZZOgzNg). If you're interested in making texture packs, check out [the RT64 documentation](https://github.com/rt64/rt64/blob/main/TEXTURE-PACKS.md).
+If you're interested in making mods for this project, check out [the mod template](https://github.com/cdlewis/snowboardkids-recomp-mod-template) and [the modding documentation](https://hackmd.io/fMDiGEJ9TBSjomuZZOgzNg). If you're interested in making texture packs, check out [the RT64 documentation](https://github.com/rt64/rt64/blob/main/TEXTURE-PACKS.md).
 
 #### Additional Control Options
 
@@ -141,11 +141,11 @@ Building is not required to play this project, as prebuilt binaries (which do no
 
 ## Credits
 
-- Moz for designing an amazing launcher background.
+- M. Lee Lunsford for designing an amazing launcher background.
 - [Bl00D4NGEL](https://github.com/Bl00D4NGEL): for significant contributions to the [Snowboard Kids decompilation project](https://github.com/cdlewis/snowboardkids-decomp).
 - [inspectredc](https://github.com/inspectredc): for significant contributions to the [Snowboard Kids decompilation project](https://github.com/cdlewis/snowboardkids-decomp).
 - [queueRAM](https://github.com/queueRAM): for significant contributions to the [Snowboard Kids decompilation project](https://github.com/cdlewis/snowboardkids-decomp).
 - [iFuzzle](https://github.com/iFuzzle): for their contributions to the [Snowboard Kids decompilation project](https://github.com/cdlewis/snowboardkids-decomp).
 - [JamesBLewis](https://github.com/JamesBLewis): for their contributions to the [Snowboard Kids decompilation project](https://github.com/cdlewis/snowboardkids-decomp).
 - [douglasjv](https://github.com/douglasjv): for their contributions to the [Snowboard Kids decompilation project](https://github.com/cdlewis/snowboardkids-decomp).
-- [Wiseguy](https://github.com/Mr-Wiseguy) and [DarioSamo](https://github.com/DarioSamo): for creating [N64Recomp](https://github.com/N64Recomp) and [RT64](https://github.com/rt64/rt64). And particularly Dario for his invaluable guidance and assistance along the way.
+- [Wiseguy](https://github.com/Mr-Wiseguy) and [DarioSamo](https://github.com/DarioSamo): for creating [N64Recomp](https://github.com/N64Recomp) and [RT64](https://github.com/rt64/rt64). And particularly Dario for his invaluable guidance and assistance with the recomp along the way.
