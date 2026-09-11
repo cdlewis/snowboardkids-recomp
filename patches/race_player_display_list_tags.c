@@ -40,7 +40,7 @@ static Gfx **const gRaceGhostPlayerModelPartDisplayLists[] = {
 static u32 sRacePlayerInterpolationGeneration;
 
 void invalidateRacePlayerInterpolation(void) {
-    // @recomp Change all player, board and shadow identities when replay snapshots replace their transforms.
+    // @recomp Change all player, board, fan and shadow identities when replay snapshots replace their transforms.
     sRacePlayerInterpolationGeneration =
         (sRacePlayerInterpolationGeneration + 1) & MODELVIEW_RACE_PLAYER_GENERATION_MASK;
 }
@@ -292,5 +292,40 @@ RECOMP_PATCH void drawRaceGhostPlayerModel(RacePlayer *player) {
             // @recomp End the unique ID
             popRacePlayerMatrixGroup();
         }
+    }
+}
+
+extern u32 gSpeedFanFrontDisplayList[];
+extern u32 gSpeedFanBackDisplayList[];
+
+RECOMP_PATCH void renderSpeedFanEffect(SpeedFanState *trail) {
+    Gfx *unused;
+    // @recomp Extract player from fan actor for viewport and replay IDs.
+    RacePlayer *player = (RacePlayer *)((u8 *)trail - __builtin_offsetof(RacePlayer, speedFan));
+
+    if (gRenderMatricesDirty != 0) {
+        trail->matricesDirty = 1;
+    }
+
+    if (trail->matricesDirty != 0) {
+        trail->matricesDirty = 0;
+        trail->frontMatrix = allocFixedTransformMatrix(&trail->frontTransform);
+        trail->backMatrix = allocFixedTransformMatrix(&trail->backTransform);
+    }
+
+    if (trail->frontMatrix != NULL) {
+        gDPPipeSync(gRegionAllocPtr++);
+        gSPSegment(gRegionAllocPtr++, 0x02, getRelocatableHeapBlockBase(gAssetHandles[0xA]));
+        gSPSegment(gRegionAllocPtr++, 0x03, getRelocatableHeapBlockBase(gAssetHandles[0xB]));
+        // @recomp Reserve part 14 for the fan body so trick rotations match the same transform between frames.
+        pushRacePlayerBoneMatrixGroup(player->playerIndex, RACE_PLAYER_BONE_ID_FAN_BODY);
+        gSPMatrix(gRegionAllocPtr++, trail->frontMatrix, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+        gSPDisplayList(gRegionAllocPtr++, gSpeedFanFrontDisplayList);
+        popRacePlayerMatrixGroup();
+        // @recomp Reserve part 15 for the spinning fan assembly, independently of the body and snowboard.
+        pushRacePlayerBoneMatrixGroup(player->playerIndex, RACE_PLAYER_BONE_ID_FAN_ROTOR);
+        gSPMatrix(gRegionAllocPtr++, trail->backMatrix, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+        gSPDisplayList(gRegionAllocPtr++, gSpeedFanBackDisplayList);
+        popRacePlayerMatrixGroup();
     }
 }
