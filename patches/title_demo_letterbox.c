@@ -1,4 +1,6 @@
 #include "patches.h"
+#include "player_interpolation.h"
+#include "camera_interpolation.h"
 
 #include "game/race/race_state.h"
 #include "game/demo/title_demo_race_intro.h"
@@ -28,18 +30,27 @@ RECOMP_PATCH void updateTitleDemoRaceIntro(void) {
     s32 fadeDelay;
     s32 nextViewportHeight;
     u32 i;
-    // @recomp Keep byte writes volatile so clang cannot replace the loops with memcpy.
     volatile u8 *destination;
+
+    // @recomp Snapshot restores teleport every player
+    if (gCurrentGameTask->callbackData1 == gTitleDemoReplaySegmentFrames[gCurrentGameTask->callbackData2]) {
+        invalidateRacePlayerInterpolation();
+    }
+
+    // @recomp Snap both camera projections on replay restores and shot changes
+    if (gCurrentGameTask->callbackData1 == gTitleDemoReplaySegmentFrames[gCurrentGameTask->callbackData2] ||
+        gCurrentGameTask->callbackData1 == gTitleDemoCameraModeFrames[gCurrentGameTask->callbackData3]) {
+        invalidateViewportCameraInterpolation(0);
+    }
 
     previousPause.value = gRaceUpdatePaused;
     configureViewport(0, 0xA0, 0x78, 0x120, (u8) gTitleDemoRaceIntroViewportHeight, 0x140, 0xF0, 1.333333373f);
     {
         u8 *viewportHeight = (u8 *)&gTitleDemoRaceIntroViewportHeight;
 
-        // @recomp Open the title-demo curtain to the full viewport height.
+        // @recomp Expand to the 208-pixel inset height so viewport edge snapping reveals the full frame.
         if (*viewportHeight != 0xD0) {
             *viewportHeight += 0x10;
-            // @recomp Create the start prompt when the full-height curtain finishes opening.
             if (*viewportHeight == 0xD0) {
                 createCallbackTask((CallbackTaskCallback)updateTitleScreenStartPrompt, 0, 0x64);
             }

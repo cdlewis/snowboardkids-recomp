@@ -168,6 +168,11 @@ typedef struct {
 static ViewportCameraHistory sViewportCameraHistory[2][VIEWPORT_COUNT];
 static u32 sViewportRenderFrame;
 
+void invalidateViewportCameraInterpolation(u32 viewportIndex) {
+    sViewportCameraHistory[0][viewportIndex].valid = 0;
+    sViewportCameraHistory[1][viewportIndex].valid = 0;
+}
+
 static s32 viewportCameraRotationCut(u32 base) {
     ViewportCameraHistory *history =
         &sViewportCameraHistory[base == PROJECTION_VIEWPORT_MAIN_ID_BASE][gCurrentViewportIndex];

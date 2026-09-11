@@ -1,6 +1,8 @@
 #include "patches.h"
 
 #include "transform_ids.h"
+#include "camera_interpolation.h"
+#include "player_interpolation.h"
 
 #include "game/engine/asset_manager.h"
 #include "game/engine/relocatable_heap.h"
@@ -35,8 +37,17 @@ static Gfx **const gRaceGhostPlayerModelPartDisplayLists[] = {
     gRaceGhostPlayerModelPart12DisplayLists,
 };
 
+static u32 sRacePlayerInterpolationGeneration;
+
+void invalidateRacePlayerInterpolation(void) {
+    // @recomp Change all player, board and shadow identities when replay snapshots replace their transforms.
+    sRacePlayerInterpolationGeneration =
+        (sRacePlayerInterpolationGeneration + 1) & MODELVIEW_RACE_PLAYER_GENERATION_MASK;
+}
+
 static u32 getRacePlayerMatrixGroupId(u32 base, u16 playerIndex, s32 boneIndex) {
     return base |
+           (sRacePlayerInterpolationGeneration << MODELVIEW_RACE_PLAYER_GENERATION_SHIFT) |
            ((u32)(gCurrentViewportIndex & MODELVIEW_RACE_PLAYER_VIEWPORT_MASK)
             << MODELVIEW_RACE_PLAYER_VIEWPORT_SHIFT) |
            ((u32)(playerIndex & MODELVIEW_RACE_PLAYER_INDEX_MASK) << MODELVIEW_RACE_PLAYER_INDEX_SHIFT) |
@@ -44,13 +55,15 @@ static u32 getRacePlayerMatrixGroupId(u32 base, u16 playerIndex, s32 boneIndex) 
 }
 
 static void pushRacePlayerBoneMatrixGroup(u16 playerIndex, s32 boneIndex) {
+    // @recomp Snap player transforms with camera cuts instead of blending the old pose into the new shot.
+    u32 component = viewportCameraSkipsInterpolation() ? G_EX_COMPONENT_SKIP : G_EX_COMPONENT_INTERPOLATE;
     gEXMatrixGroupSimple(
         gRegionAllocPtr++,
         getRacePlayerMatrixGroupId(MODELVIEW_RACE_PLAYER_BONE_ID_BASE, playerIndex, boneIndex),
         G_EX_PUSH,
         G_MTX_MODELVIEW,
-        G_EX_COMPONENT_INTERPOLATE,
-        G_EX_COMPONENT_INTERPOLATE,
+        component,
+        component,
         G_EX_COMPONENT_SKIP,
         G_EX_COMPONENT_SKIP,
         G_EX_COMPONENT_AUTO,
@@ -62,15 +75,17 @@ static void pushRacePlayerBoneMatrixGroup(u16 playerIndex, s32 boneIndex) {
 }
 
 static void pushRacePlayerShadowMatrixGroup(u16 playerIndex) {
+    // @recomp Snap player transforms with camera cuts instead of blending the old pose into the new shot.
+    u32 component = viewportCameraSkipsInterpolation() ? G_EX_COMPONENT_SKIP : G_EX_COMPONENT_INTERPOLATE;
     gEXMatrixGroupSimple(
         gRegionAllocPtr++,
         getRacePlayerMatrixGroupId(MODELVIEW_RACE_PLAYER_SHADOW_ID_BASE, playerIndex, 0),
         G_EX_PUSH,
         G_MTX_MODELVIEW,
-        G_EX_COMPONENT_INTERPOLATE,
-        G_EX_COMPONENT_INTERPOLATE,
+        component,
+        component,
         G_EX_COMPONENT_SKIP,
-        G_EX_COMPONENT_INTERPOLATE,
+        component,
         G_EX_COMPONENT_AUTO,
         G_EX_ORDER_AUTO,
         G_EX_EDIT_NONE,
