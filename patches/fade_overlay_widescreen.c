@@ -7,6 +7,7 @@
 #include "game/engine/render_callback.h"
 #include "game/engine/viewport_manager.h"
 #include "game/race/camera/race_camera.h"
+#include "game/math/fixed_point_math.h"
 #include "game/race/ui/race_hud.h"
 
 extern s16 gUiBlinkTimer;
@@ -155,19 +156,51 @@ static void drawRaceViewportDividers(void) {
     gEXSetRectAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, G_EX_ORIGIN_NONE, 0, 0, 0, 0);
 }
 
+typedef struct {
+    Mat3x3 rotation;
+    u32 frame;
+    u8 valid;
+} ViewportCameraHistory;
+
+
+static ViewportCameraHistory sViewportCameraHistory[2][VIEWPORT_COUNT];
+static u32 sViewportRenderFrame;
+
+static s32 viewportCameraRotationCut(u32 base) {
+    ViewportCameraHistory *history =
+        &sViewportCameraHistory[base == PROJECTION_VIEWPORT_MAIN_ID_BASE][gCurrentViewportIndex];
+    s16 *rotation = gRaceCameras[gCurrentViewportIndex].cameraTransform.rotation;
+    s64 dotSum = 0;
+    s64 traceThreshold;
+    s32 cut;
+    s32 i;
+
+    traceThreshold = (s64)(FIXED_MATRIX_ONE + 2 * fixedCosine(20 * 4096 / 360)) * FIXED_MATRIX_ONE;
+    for (i = 0; i < 9; i++) {
+        dotSum += (s32)history->rotation[i] * rotation[i];
+        history->rotation[i] = rotation[i];
+    }
+    cut = !history->valid || history->frame + 1 != sViewportRenderFrame || dotSum < traceThreshold;
+    history->valid = 1;
+    history->frame = sViewportRenderFrame;
+    return cut;
+}
+
 static void pushViewportProjectionMatrixGroup(u32 base) {
     u32 id = base | gCurrentViewportIndex;
+    u32 component = viewportCameraRotationCut(base) ? G_EX_COMPONENT_SKIP : G_EX_COMPONENT_INTERPOLATE;
     u32 aspect = raceViewportUsesColumns(gCurrentViewportIndex) ? G_EX_ASPECT_ADJUST : G_EX_ASPECT_AUTO;
 
     if (gRaceCameras[gCurrentViewportIndex].initialized.value != 0) {
         id |= PROJECTION_VIEWPORT_RACE_CONTEXT_BIT;
     }
 
+    // @recomp Snap the entire camera projection on a cut, including translation, so no intermediate shot is drawn.
     gEXMatrixGroup(
         gRegionAllocPtr++, id, G_EX_INTERPOLATE_SIMPLE, G_EX_PUSH, G_MTX_PROJECTION,
-        G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE,
-        G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_SKIP,
-        G_EX_COMPONENT_INTERPOLATE, G_EX_ORDER_LINEAR, G_EX_EDIT_NONE, aspect,
+        component, component, component,
+        component, component, G_EX_COMPONENT_SKIP,
+        component, G_EX_ORDER_LINEAR, G_EX_EDIT_NONE, aspect,
         G_EX_COMPONENT_SKIP, G_EX_COMPONENT_AUTO
     );
 }
@@ -183,6 +216,7 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
     s32 raceFrame = 0;
     f32 aspectScale = recomp_get_target_aspect_ratio(4.0f / 3.0f) / (4.0f / 3.0f);
 
+    sViewportRenderFrame++;
     for (i = 0; i < VIEWPORT_COUNT; i++) {
         splitFrame |= raceViewportUsesColumns(i);
         raceFrame |= gRaceCameras[i].initialized.value != 0 && gViewportStates[i].screenBoundsValid != 0;
