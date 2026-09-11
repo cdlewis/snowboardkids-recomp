@@ -1,6 +1,7 @@
 #include "patches.h"
 
 #include "transform_ids.h"
+#include "camera_interpolation.h"
 #include "race_split_screen.h"
 #include "podium_scene.h"
 
@@ -160,6 +161,7 @@ typedef struct {
     Mat3x3 rotation;
     u32 frame;
     u8 valid;
+    u8 skipInterpolation;
 } ViewportCameraHistory;
 
 
@@ -181,9 +183,14 @@ static s32 viewportCameraRotationCut(u32 base) {
         history->rotation[i] = rotation[i];
     }
     cut = !history->valid || history->frame + 1 != sViewportRenderFrame || dotSum < traceThreshold;
+    history->skipInterpolation = cut;
     history->valid = 1;
     history->frame = sViewportRenderFrame;
     return cut;
+}
+
+s32 viewportCameraSkipsInterpolation(void) {
+    return sViewportCameraHistory[1][gCurrentViewportIndex].skipInterpolation;
 }
 
 static void pushViewportProjectionMatrixGroup(u32 base) {
