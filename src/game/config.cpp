@@ -62,6 +62,36 @@ void set_sound_number(const std::string& option_id, int value) {
     }
 }
 
+void set_controller_defaults() {
+    using recompinput::GameInput;
+    using recompinput::InputField;
+    using recompinput::set_default_mapping_for_controller;
+
+    // Accept the adapter's B output as well as the standard gamepad X binding.
+    set_default_mapping_for_controller(GameInput::B, {
+        InputField::controller_digital(SDL_CONTROLLER_BUTTON_X),
+        InputField::controller_digital(SDL_CONTROLLER_BUTTON_B),
+    });
+    set_default_mapping_for_controller(GameInput::BACK_MENU, {
+        InputField::controller_digital(SDL_CONTROLLER_BUTTON_X),
+        InputField::controller_digital(SDL_CONTROLLER_BUTTON_B),
+    });
+
+    // Keep C buttons on the right stick so face buttons do not activate two N64 inputs.
+    set_default_mapping_for_controller(GameInput::C_LEFT, {
+        InputField::controller_analog(SDL_CONTROLLER_AXIS_RIGHTX, false),
+    });
+    set_default_mapping_for_controller(GameInput::C_RIGHT, {
+        InputField::controller_analog(SDL_CONTROLLER_AXIS_RIGHTX, true),
+    });
+    set_default_mapping_for_controller(GameInput::C_UP, {
+        InputField::controller_analog(SDL_CONTROLLER_AXIS_RIGHTY, false),
+    });
+    set_default_mapping_for_controller(GameInput::C_DOWN, {
+        InputField::controller_analog(SDL_CONTROLLER_AXIS_RIGHTY, true),
+    });
+}
+
 void set_control_descriptions() {
     recompinput::set_game_input_description(recompinput::GameInput::Y_AXIS_POS, "Move Up / Menu Up");
     recompinput::set_game_input_description(recompinput::GameInput::Y_AXIS_NEG, "Move Down / Menu Down");
@@ -83,6 +113,8 @@ void set_control_descriptions() {
 }
 
 void zelda64::init_config() {
+    set_controller_defaults();
+
     std::filesystem::path recomp_dir = recompui::file::get_app_folder_path();
     if (!recomp_dir.empty()) {
         std::filesystem::create_directories(recomp_dir);
