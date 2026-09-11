@@ -1,4 +1,5 @@
 #include "patches.h"
+#include "race_split_screen.h"
 #include "game/engine/asset_manager.h"
 #include "game/engine/relocatable_heap.h"
 #include "game/engine/viewport_manager.h"
@@ -15,7 +16,7 @@ extern s16 gRaceHudCoinSpinnerFrame;
 extern s16 gRaceLapCount;
 extern const char gRaceHudMultiplayerScoreFormat[];
 
-static void anchorGridHudGroup(s32 side) {
+void anchorGridHudGroup(s32 side) {
     ViewportState *viewport = &gViewportStates[gCurrentViewportIndex];
     f32 scale = recomp_get_target_aspect_ratio(4.0f / 3.0f) / (4.0f / 3.0f);
     f32 center = (viewport->left + viewport->right) * 0.5f;

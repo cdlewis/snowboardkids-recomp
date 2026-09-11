@@ -17,7 +17,7 @@ extern s16 gRaceLapCount;
 extern Gfx *gRegionAllocPtr;
 extern f32 recomp_get_target_hud_aspect_ratio(f32 original);
 
-static void anchorVerticalHudGroup(s32 side) {
+void anchorVerticalHudGroup(s32 side) {
     ViewportState *viewport = &gViewportStates[gCurrentViewportIndex];
     f32 targetAspect = recomp_get_target_aspect_ratio(4.0f / 3.0f);
     f32 hudAspect = recomp_get_target_hud_aspect_ratio(4.0f / 3.0f);
