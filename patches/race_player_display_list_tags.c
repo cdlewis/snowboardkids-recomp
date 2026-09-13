@@ -40,9 +40,12 @@ static Gfx **const gRaceGhostPlayerModelPartDisplayLists[] = {
 static u32 sRacePlayerInterpolationGeneration;
 
 void invalidateRacePlayerInterpolation(void) {
-    // @recomp Change all player, board, fan and shadow identities when replay snapshots replace their transforms.
     sRacePlayerInterpolationGeneration =
         (sRacePlayerInterpolationGeneration + 1) & MODELVIEW_RACE_PLAYER_GENERATION_MASK;
+}
+
+u32 getRacePlayerInterpolationGeneration(void) {
+    return sRacePlayerInterpolationGeneration;
 }
 
 static u32 getRacePlayerMatrixGroupId(u32 base, u16 playerIndex, s32 boneIndex) {
