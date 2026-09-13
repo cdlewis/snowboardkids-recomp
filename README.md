@@ -102,7 +102,7 @@ Static recompilation is the process of automatically translating an application 
 
 #### How is this related to the decompilation project?
 
-Unlike N64 ports in the past, this project is not based on the source code provided by a decompilation of the game. This is because static recompilation bypasses the need for decompiled source code when making a port, allowing ports to be made **without source code**. However, the reverse engineering work done by the decompilation team was invaluable for providing some of the enhancements featured in this project. For this reason, the project uses headers and some functions from the [Decompilation Project](https://github.com/cdlewis/snowboardkids2-decomp) in order to make modifications to the game. Many thanks to the [decompilation team](https://github.com/cdlewis/snowboardkids2-decomp/graphs/contributors) for all of the hard work they've done.
+Unlike N64 ports in the past, this project is not based on the source code provided by a decompilation of the game. This is because static recompilation bypasses the need for decompiled source code when making a port, allowing ports to be made **without source code**. However, the reverse engineering work done by the decompilation team was invaluable for providing some of the enhancements featured in this project. For this reason, the project uses headers and some functions from the [Decompilation Project](https://github.com/cdlewis/snowboardkids-decomp) in order to make modifications to the game. Many thanks to the [decompilation team](https://github.com/cdlewis/snowboardkids2-decomp/graphs/contributors) for all of the hard work they've done.
 
 #### Where is the savefile stored?
 
@@ -126,7 +126,7 @@ Yes, if you place a file named `portable.txt` in the same folder as the executab
 
 ## Building
 
-Building is not required to play this project, as prebuilt binaries (which do not contain game assets) can be found in the [Releases](https://github.com/cdlewis/snowboardkids2-recomp/releases/latest) section. Instructions on how to build this project can be found in the [BUILDING.md](BUILDING.md) file.
+Building is not required to play this project, as prebuilt binaries (which do not contain game assets) can be found in the [Releases](https://github.com/cdlewis/snowboardkids-recomp/releases/latest) section. Instructions on how to build this project can be found in the [BUILDING.md](BUILDING.md) file.
 
 ## Libraries Used and Projects Referenced
 
