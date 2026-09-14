@@ -318,3 +318,132 @@ RECOMP_PATCH void drawScaledAssetTableSpriteWithExplicitPalette(s16 x, s16 y, As
     gDPSetTextureFilter(gRegionAllocPtr++, G_TF_POINT);
     gDPPipeSync(gRegionAllocPtr++);
 }
+
+extern s16 gMenuSpriteFlipScales[8];
+extern u16 gMenuTransparentPalette[MENU_PALETTE_COLOR_COUNT];
+
+RECOMP_PATCH void drawMenuSpriteClipped(s16 x, s16 y, AssetTable *table, u16 imageIndex, u16 scaleX, u16 scaleY,
+                           u8 flipMode, u8 paletteIndex, s16 clipLeft, s16 clipTop, s16 clipRight,
+                           s16 clipBottom) {
+    AssetTableEntry *entry;
+    s32 selectedPalette;
+    u8 *palette;
+    s32 left;
+    s32 top;
+    s32 right;
+    s32 bottom;
+    s32 texS;
+    s32 texT;
+    u32 height;
+    s32 pad;
+    s16 flipS;
+    s16 flipT;
+    s16 pad2;
+    s16 minX;
+    s16 minY;
+    s16 maxX;
+    s16 maxY;
+
+    entry = &table->entries[imageIndex];
+    palette = table->entryCount * sizeof(AssetTableEntry) + (u8*)table->entries;
+    if (scaleX > 0x200) {
+        return;
+    }
+    if (scaleX <= 0) {
+        return;
+    }
+    if (scaleY > 0x200) {
+        return;
+    }
+    if (scaleY <= 0) {
+        return;
+    }
+
+    flipS = gMenuSpriteFlipScales[(flipMode & 3) * 2 + 0];
+    flipT = gMenuSpriteFlipScales[(flipMode & 3) * 2 + 1];
+
+    texS = entry->width;
+    texT = entry->height;
+
+    left = (x + gMenuViewportCenterX) << 2;
+    top = (y + gMenuViewportCenterY) << 2;
+    right = left + (((scaleX * texS) << 2) >> 5);
+    bottom = top + (((scaleY * texT) << 2) >> 5);
+
+    height = entry->height;
+    texS = 0 * height;
+    texT = 0;
+    if (flipS == -1) {
+        texS = ((entry->width - 1) << 5);
+    }
+    if (flipT == -1) {
+        texT = ((entry->height - 1) << 5) - texT;
+    }
+
+
+    clipTop = gMenuViewportCenterY - clipTop;
+    clipBottom = gMenuViewportCenterY + clipBottom;
+    clipLeft = gMenuViewportCenterX - clipLeft;
+    clipRight = gMenuViewportCenterX + clipRight;
+    if (clipLeft < gMenuViewportCenterX - (gMenuViewportWidth / 2)) {
+        clipLeft = gMenuViewportCenterX - (gMenuViewportWidth / 2);
+    }
+    if (clipRight > gMenuViewportCenterX + (gMenuViewportWidth / 2)) {
+        clipRight = gMenuViewportCenterX + (gMenuViewportWidth / 2);
+    }
+    if (clipTop < gMenuViewportCenterY - (gMenuViewportHeight / 2)) {
+        clipTop = gMenuViewportCenterY - (gMenuViewportHeight / 2);
+    }
+    if (clipBottom > gMenuViewportCenterY + (gMenuViewportHeight / 2)) {
+        clipBottom = gMenuViewportCenterY + (gMenuViewportHeight / 2);
+    }
+
+    minX = clipRight << 2;
+    minY = clipBottom << 2;
+    maxX = clipLeft << 2;
+    maxY = clipTop << 2;
+    if ((left >= minX) || (top >= minY) || (right < maxX) || (bottom < maxY)) {
+        return;
+    }
+
+    if (left < maxX) {
+        texS = (((maxX - left) << 3) << 5) / scaleX;
+        if (flipS == -1) {
+            texS = ((entry->width - 1) << 5) - texS;
+        }
+        left = maxX;
+    }
+    if (top < maxY) {
+        texT = (((maxY - top) << 3) << 5) / scaleY;
+        if (flipT == -1) {
+            texT = ((entry->height - 1) << 5) - texT;
+        }
+        top = maxY;
+    }
+    if (right >= minX) {
+        right = minX - 4;
+    }
+    if (bottom >= minY) {
+        bottom = minY - 4;
+    }
+
+    if (paletteIndex == 0) {
+        selectedPalette = entry->paletteIndex;
+    } else {
+        selectedPalette = (u16)(paletteIndex - 1);
+    }
+
+    gDPLoadTextureTile_4b(gRegionAllocPtr++, entry->imageOffset + (u8 *)table,
+                          G_IM_FMT_CI, entry->width, entry->height, 0, 0,
+                          // @recomp Clamp to the last texel so scaled confetti cannot sample an extra row or column.
+                          entry->width - 1, entry->height - 1, 0, G_TX_CLAMP, G_TX_CLAMP,
+                          G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOLOD);
+    if (selectedPalette != 0xFE) {
+        gDPLoadTLUT_pal16(gRegionAllocPtr++, 0, (selectedPalette << 5) + (u8*)palette);
+    } else {
+        gDPLoadTLUT_pal16(gRegionAllocPtr++, 0, gMenuTransparentPalette);
+    }
+    gSPTextureRectangle(gRegionAllocPtr++, left, top, right, bottom, G_TX_RENDERTILE,
+                        texS, texT, (u16)((u16)(0x8000 / scaleX) * flipS),
+                        (u16)((u16)(0x8000 / scaleY) * flipT));
+}
