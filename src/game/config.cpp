@@ -95,20 +95,25 @@ void set_controller_defaults() {
 void set_control_descriptions() {
     recompinput::set_game_input_description(recompinput::GameInput::Y_AXIS_POS, "Move Up / Menu Up");
     recompinput::set_game_input_description(recompinput::GameInput::Y_AXIS_NEG, "Move Down / Menu Down");
-    recompinput::set_game_input_description(recompinput::GameInput::X_AXIS_NEG, "Move Left / Menu Left");
-    recompinput::set_game_input_description(recompinput::GameInput::X_AXIS_POS, "Move Right / Menu Right");
+    recompinput::set_game_input_description(recompinput::GameInput::X_AXIS_NEG, "Steer Left / Menu Left");
+    recompinput::set_game_input_description(recompinput::GameInput::X_AXIS_POS, "Steer Right / Menu Right");
 
-    recompinput::set_game_input_description(recompinput::GameInput::A, "Confirm");
-    recompinput::set_game_input_description(recompinput::GameInput::B, "Cancel");
-    recompinput::set_game_input_description(recompinput::GameInput::Z, "Trick");
-    recompinput::set_game_input_description(recompinput::GameInput::L, "Camera");
-    recompinput::set_game_input_description(recompinput::GameInput::R, "Crouch");
-    recompinput::set_game_input_description(recompinput::GameInput::START, "Pause");
+    recompinput::set_game_input_description(recompinput::GameInput::A, "Jump / Menu Confirm");
+    recompinput::set_game_input_description(recompinput::GameInput::B, "Use Blue Item / Menu Cancel");
+    recompinput::set_game_input_description(recompinput::GameInput::Z, "Use Red Item");
+    recompinput::set_game_input_description(recompinput::GameInput::L, "Not Used");
+    recompinput::set_game_input_description(recompinput::GameInput::R, "Not Used");
+    recompinput::set_game_input_description(recompinput::GameInput::START, "Pause / Menu Confirm");
 
-    recompinput::set_game_input_description(recompinput::GameInput::C_UP, "C Up");
-    recompinput::set_game_input_description(recompinput::GameInput::C_DOWN, "C Down");
-    recompinput::set_game_input_description(recompinput::GameInput::C_LEFT, "C Left");
-    recompinput::set_game_input_description(recompinput::GameInput::C_RIGHT, "C Right");
+    recompinput::set_game_input_description(recompinput::GameInput::C_UP, "Grab (Front)");
+    recompinput::set_game_input_description(recompinput::GameInput::C_DOWN, "Grab (Back)");
+    recompinput::set_game_input_description(recompinput::GameInput::C_LEFT, "Grab (Left)");
+    recompinput::set_game_input_description(recompinput::GameInput::C_RIGHT, "Grab (Right)");
+
+    recompinput::set_game_input_description(recompinput::GameInput::DPAD_UP, "Menu Up");
+    recompinput::set_game_input_description(recompinput::GameInput::DPAD_DOWN, "Menu Down");
+    recompinput::set_game_input_description(recompinput::GameInput::DPAD_LEFT, "Menu Left");
+    recompinput::set_game_input_description(recompinput::GameInput::DPAD_RIGHT, "Menu Right");
 }
 }
 
