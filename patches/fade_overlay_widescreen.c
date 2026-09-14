@@ -551,6 +551,8 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
 
     if ((gMenuForegroundRenderCallbackList != NULL) || (gMenuRenderCallbackList != NULL)) {
         if (!raceFrame) {
+            // @recomp Keep menu artwork at native proportions so it fits the centred menu scissor.
+            gEXSetRectAspect(gRegionAllocPtr++, G_EX_ASPECT_ADJUST);
             // @recomp Match the sprite helpers' horizontal menu bounds. Hidden paint-menu
             // panels can otherwise leave a border fragment in the 16-pixel side margin.
             gEXSetScissorAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, G_EX_ORIGIN_NONE,
