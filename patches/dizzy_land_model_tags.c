@@ -212,3 +212,53 @@ RECOMP_PATCH void renderRaceCourseSpinningObject(RaceUiSpinningParticleActor *ar
         gEXPopMatrixGroup(gRegionAllocPtr++, G_MTX_MODELVIEW);
     }
 }
+
+// @recomp Preserve the decomp scale expression used by the cup collision animation.
+#define SCALE_MATRIX_COMPONENT(value, scale) ((value * scale) / 0x1000)
+
+RECOMP_PATCH void renderDizzyLandTeacupBumper(DizzyLandTeacupBumperActor *arg0) {
+    struct {
+        Transform3D transform;
+        s16 unused[2];
+    } scratch;
+
+    if (gRenderMatricesDirty != 0) {
+        arg0->matrixDirty = 1;
+    }
+
+    if (isPositionNearCurrentRaceViewportCamera(&arg0->pos) != 0) {
+        if (arg0->matrixDirty != 0) {
+            arg0->matrixDirty = 0;
+            makeFixedRotationY(scratch.transform.rotation, arg0->yaw);
+            scratch.transform.rotation[0] = SCALE_MATRIX_COMPONENT(scratch.transform.rotation[0], arg0->xzScale);
+            scratch.transform.rotation[3] = SCALE_MATRIX_COMPONENT(scratch.transform.rotation[3], arg0->xzScale);
+            scratch.transform.rotation[6] = SCALE_MATRIX_COMPONENT(scratch.transform.rotation[6], arg0->xzScale);
+            scratch.transform.rotation[2] = SCALE_MATRIX_COMPONENT(scratch.transform.rotation[2], arg0->xzScale);
+            scratch.transform.rotation[5] = SCALE_MATRIX_COMPONENT(scratch.transform.rotation[5], arg0->xzScale);
+            scratch.transform.rotation[8] = SCALE_MATRIX_COMPONENT(scratch.transform.rotation[8], arg0->xzScale);
+            scratch.transform.translation.x = arg0->pos.x;
+            scratch.transform.translation.y = arg0->pos.y;
+            scratch.transform.translation.z = arg0->pos.z;
+            arg0->matrix = allocFixedTransformMatrix(&scratch.transform);
+        }
+
+        if (arg0->matrix != NULL) {
+            gDPPipeSync(RACE_UI_TRAIL_GFX_ALLOC_PTR++);
+            gSPSegment(RACE_UI_TRAIL_GFX_ALLOC_PTR++, 0x02, getRelocatableHeapBlockBase(ASSET_HANDLE(0x8)));
+            gSPSegment(RACE_UI_TRAIL_GFX_ALLOC_PTR++, 0x03, getRelocatableHeapBlockBase(ASSET_HANDLE(0x9)));
+            // @recomp Match each cup by viewport and persistent spawn index 0-9, not changing draw order.
+            // @recomp Use naive matrix interpolation so intermediate cup rotations advance instead of reversing.
+            // @recomp The same 3x3 matrix interpolation preserves the collision squash in X/Z.
+            gEXMatrixGroupSimple(RACE_UI_TRAIL_GFX_ALLOC_PTR++, MODELVIEW_DIZZY_LAND_TEACUP_ID_BASE |
+                                 ((u32)gCurrentViewportIndex << MODELVIEW_DIZZY_LAND_VIEWPORT_SHIFT) | arg0->task.userId,
+                                 G_EX_PUSH, G_MTX_MODELVIEW,
+                                 G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_SKIP,
+                                 G_EX_COMPONENT_SKIP, G_EX_COMPONENT_AUTO, G_EX_ORDER_LINEAR, G_EX_EDIT_NONE,
+                                 G_EX_COMPONENT_AUTO, G_EX_COMPONENT_AUTO);
+            gSPMatrix(RACE_UI_TRAIL_GFX_ALLOC_PTR++, arg0->matrix, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+            gSPDisplayList(RACE_UI_TRAIL_GFX_ALLOC_PTR++, &DIZZY_LAND_TEACUP_BUMPER_DISPLAY_LIST_VRAM);
+            // @recomp End the cup identity before drawing another course object.
+            gEXPopMatrixGroup(RACE_UI_TRAIL_GFX_ALLOC_PTR++, G_MTX_MODELVIEW);
+        }
+    }
+}

@@ -12,7 +12,7 @@ extern s16 gMenuSpriteFlipScales[8];
 
 static s32 sDrawingMenuBackdrop;
 
-RECOMP_PATCH void drawMenuIconTilemapSpriteActor(void *arg0) {
+RECOMP_PATCH void drawScrollingMenuBackdropActor(void *arg0) {
     SpriteActor *actor = arg0;
 
     // @recomp Keep background tiles proportional while stretching their scissor across the output.
