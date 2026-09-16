@@ -13,13 +13,6 @@
 extern RaceCourseTextureMarkerEntry *gCourseTextureMarkerSpawnEntriesByCourse[];
 
 #define ASSET_HANDLE(index) (gAssetHandles[(index)])
-#define RACE_COURSE_EFFECTS_GFX_CMD(pkt, cmd0, cmd1) \
-    { \
-        Gfx *_g = (Gfx *)(pkt); \
-        _g->words.w0 = (cmd0); \
-        _g->words.w1 = (cmd1); \
-    }
-
 RECOMP_PATCH void renderCourseTextureMarkers(RaceCourseObjectMatrixEffect *arg0) {
     volatile u8 pad[8];
     void *image;
@@ -75,12 +68,8 @@ RECOMP_PATCH void renderCourseTextureMarkers(RaceCourseObjectMatrixEffect *arg0)
                                      G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP);
                 gSPMatrix(gRegionAllocPtr++, &arg0->matrices[i], G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
                 gSPMatrix(gRegionAllocPtr++, gViewportMatrix, G_MTX_NOPUSH | G_MTX_MUL | G_MTX_MODELVIEW);
-                {
-                    Gfx *_g = gRegionAllocPtr++;
-                    _g->words.w0 = 0x0400103F;
-                    _g->words.w1 = (u32)&gCourseTextureMarkerVertices[entry->type * 4];
-                }
-                RACE_COURSE_EFFECTS_GFX_CMD(gRegionAllocPtr++, 0xB1060402, 0x60200);
+                gSPVertex(gRegionAllocPtr++, &gCourseTextureMarkerVertices[entry->type * 4], 4, 0);
+                gSP2Triangles(gRegionAllocPtr++, 3, 2, 1, 0, 3, 1, 0, 0);
                 // @recomp End this marker identity before drawing another object.
                 gEXPopMatrixGroup(gRegionAllocPtr++, G_MTX_MODELVIEW);
             }
