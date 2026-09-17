@@ -47,6 +47,7 @@
 
 #include "mods/snowboardkids_mod_template.h"
 #include "mods/snowboardkids_no_rubber_banding.h"
+#include "mods/snowboardkids_nepo_kids.h"
 #include "sk1_game_version.h"
 #include "sk1_launcher.h"
 #include "recomp_theme.h"
@@ -830,6 +831,9 @@ int main(int argc, char** argv) {
     recomp::mods::register_embedded_mod(
         "snowboardkids_no_rubber_banding",
         { reinterpret_cast<const uint8_t*>(snowboardkids_no_rubber_banding), snowboardkids_no_rubber_banding_size });
+    recomp::mods::register_embedded_mod(
+        "snowboardkids_nepo_kids",
+        { reinterpret_cast<const uint8_t*>(snowboardkids_nepo_kids), snowboardkids_nepo_kids_size });
 
     REGISTER_FUNC(recomp_get_target_aspect_ratio);
     REGISTER_FUNC(recomp_get_target_hud_aspect_ratio);
