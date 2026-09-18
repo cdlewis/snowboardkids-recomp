@@ -8,6 +8,8 @@
 #include "game/race/flow/race_flow.h"
 #include "race_split_screen.h"
 #include "podium_scene.h"
+#include "training_viewport.h"
+#include "game/menu/main_menu/training_course_race_flow.h"
 
 extern s32 recomp_get_vertical_2p_split_screen_enabled(void);
 static s32 sVerticalTwoPlayerSplit;
@@ -20,6 +22,29 @@ s32 raceUsesVerticalTwoPlayerSplit(void) {
 #define SCREEN_HEIGHT 240
 
 #define VIEWPORT_EDGE_SNAP 16
+
+static f32 sTrainingViewportTransitionProgress = -1.0f;
+
+f32 trainingViewportTransitionScale(s32 index) {
+    if (index != 0 || sTrainingViewportTransitionProgress < 0.0f) {
+        return 0.0f;
+    }
+    return 1.0f + (recomp_get_target_aspect_ratio(4.0f / 3.0f) / (4.0f / 3.0f) - 1.0f) *
+                      sTrainingViewportTransitionProgress;
+}
+
+static f32 configureTrainingViewportTransition(s32 index) {
+    if (index == 0 && gCurrentGameTask != NULL) {
+        if (gCurrentGameTask->callbacks[0] == initTrainingCourseRace) {
+            return 0.0f;
+        }
+        if (gCurrentGameTask->callbacks[0] == zoomTrainingCourseRaceViewport &&
+            gCurrentGameTask->callbackData0 > 0 && gCurrentGameTask->callbackData0 <= 16) {
+            return gCurrentGameTask->callbackData0 / 16.0f;
+        }
+    }
+    return -1.0f;
+}
 
 static f32 configureRaceSplitDirection(s32 index, s32 *x, s32 *y, u16 *width, u16 *height,
                                      u16 *scaleX, u16 *scaleY, f32 *aspect) {
@@ -101,6 +126,15 @@ RECOMP_PATCH void configureViewport(
 ) {
     f32 fov = configureRaceSplitDirection(viewportIndex, &centerX, &centerY, &width, &height,
                                          &scaleX, &scaleY, &aspect);
+    f32 trainingProgress = configureTrainingViewportTransition(viewportIndex);
+    if (viewportIndex == 0) {
+        sTrainingViewportTransitionProgress = trainingProgress;
+    }
+    if (trainingProgress > 0.0f) {
+        // @recomp Remove the 16px inset gradually so each edge expands smoothly through training's zoom.
+        width += gCurrentGameTask->callbackData0 * 2;
+        height += gCurrentGameTask->callbackData0 * 2;
+    }
     if (isPodiumViewport(viewportIndex)) {
         // Reveal the top and bottom of the pass-award scene without changing its
         // projection, camera, or the authored size and position of its text.
@@ -150,7 +184,9 @@ RECOMP_PATCH void configureViewport(
     }
 
     // @recomp Expand near-edge bounds and recenter the rendered viewport to match them.
-    snapViewportBoundsToScreenEdges(&gViewportStates[viewportIndex]);
+    if (trainingProgress < 0.0f) {
+        snapViewportBoundsToScreenEdges(&gViewportStates[viewportIndex]);
+    }
     
     guPerspective(
         &gViewportStates[viewportIndex].projectionMatrix,
@@ -187,6 +223,10 @@ RECOMP_PATCH void configureViewportWithFovAndFarClip(
     s32 endingCredits = gCurrentGameTask != NULL &&
                         gCurrentGameTask->callbacks[0] == initEndingCreditsFlow;
 
+    // @recomp Disable training's aspect transition when the custom-FOV path takes over viewport zero.
+    if (viewportIndex == 0) {
+        sTrainingViewportTransitionProgress = -1.0f;
+    }
     gViewportStates[viewportIndex].active = 1;
     gViewportStates[viewportIndex].viewport.vp.vtrans[0] = centerX * 4;
     gViewportStates[viewportIndex].viewport.vp.vtrans[1] = centerY * 4;
@@ -267,6 +307,10 @@ RECOMP_PATCH void configureRaceViewport(
 ) {
     f32 fov = configureRaceSplitDirection(viewportIndex, &centerX, &centerY, &width, &height,
                                          &scaleX, &scaleY, &aspect);
+    // @recomp Disable training's aspect transition when the race path takes over viewport zero.
+    if (viewportIndex == 0) {
+        sTrainingViewportTransitionProgress = -1.0f;
+    }
     gViewportStates[viewportIndex].active = 1;
     gViewportStates[viewportIndex].viewport.vp.vtrans[0] = centerX * 4;
     gViewportStates[viewportIndex].viewport.vp.vtrans[1] = centerY * 4;
@@ -342,6 +386,10 @@ RECOMP_PATCH void configureMenuViewport(
     u16 scaleY,
     f32 aspect
 ) {
+    // @recomp Disable training's aspect transition when the menu path takes over viewport zero.
+    if (viewportIndex == 0) {
+        sTrainingViewportTransitionProgress = -1.0f;
+    }
     gViewportStates[viewportIndex].active = 1;
     gViewportStates[viewportIndex].viewport.vp.vtrans[0] = centerX * 4;
     gViewportStates[viewportIndex].viewport.vp.vtrans[1] = centerY * 4;

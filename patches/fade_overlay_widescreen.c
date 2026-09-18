@@ -4,6 +4,8 @@
 #include "camera_interpolation.h"
 #include "race_split_screen.h"
 #include "podium_scene.h"
+#include "training_viewport.h"
+#include "PR/gu.h"
 
 #include "game/engine/render_callback.h"
 #include "game/engine/viewport_manager.h"
@@ -50,7 +52,22 @@ static s32 raceViewportUsesColumns(s32 index) {
 
 static void setViewportScissorAlignment(s32 index) {
     ViewportState *viewport = &gViewportStates[index];
-    if (raceViewportUsesColumns(index)) {
+    // @recomp A nonzero scale identifies training's opening viewport transition. match its scissor to the widening view.
+    f32 trainingScale = trainingViewportTransitionScale(index);
+    if (trainingScale != 0.0f) {
+        f32 outputScale = recomp_get_target_aspect_ratio(4.0f / 3.0f) / (4.0f / 3.0f);
+        f32 insetPosition = FRAMEBUFFER_WIDTH / 2 +
+                            (viewport->left - FRAMEBUFFER_WIDTH / 2) * trainingScale / outputScale;
+        s32 inset = (s32)(insetPosition + 0.5f);
+        // @recomp Round the opening clip inward so scene pixels cannot leak beyond the rounded corner masks.
+        if (trainingScale == 1.0f && inset < insetPosition) {
+            inset++;
+        }
+        gEXSetScissorAspect(gRegionAllocPtr++, G_EX_ASPECT_STRETCH);
+        gEXSetScissorAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, G_EX_ORIGIN_NONE,
+                          inset - viewport->left, 0, FRAMEBUFFER_WIDTH - inset - viewport->right, 0,
+                          0, 0, FRAMEBUFFER_WIDTH, FRAMEBUFFER_HEIGHT);
+    } else if (raceViewportUsesColumns(index)) {
         if (viewport->left < FRAMEBUFFER_WIDTH / 2) {
             gEXSetScissorAlign(gRegionAllocPtr++, G_EX_ORIGIN_LEFT, G_EX_ORIGIN_CENTER,
                               0, 0, -FRAMEBUFFER_WIDTH / 2, 0, 0, 0,
@@ -69,6 +86,7 @@ static void setViewportScissorAlignment(s32 index) {
 static void emitRaceViewport(void) {
     Vp *viewport = &gCurrentFrameRenderData->viewport.viewports[gCurrentViewportIndex];
     if (raceViewportUsesColumns(gCurrentViewportIndex) ||
+        trainingViewportTransitionScale(gCurrentViewportIndex) != 0.0f ||
         (gCurrentViewportIndex == 2 && isPodiumViewport(gCurrentViewportIndex))) {
         gEXViewport(gRegionAllocPtr++, G_EX_ORIGIN_CENTER, viewport);
     } else {
@@ -213,7 +231,9 @@ s32 viewportCameraSkipsInterpolation(void) {
 static void pushViewportProjectionMatrixGroup(u32 base) {
     u32 id = base | gCurrentViewportIndex;
     u32 component = viewportCameraRotationCut(base) ? G_EX_COMPONENT_SKIP : G_EX_COMPONENT_INTERPOLATE;
-    u32 aspect = raceViewportUsesColumns(gCurrentViewportIndex) ? G_EX_ASPECT_ADJUST : G_EX_ASPECT_AUTO;
+    u32 aspect = raceViewportUsesColumns(gCurrentViewportIndex) ||
+                 trainingViewportTransitionScale(gCurrentViewportIndex) != 0.0f ?
+                     G_EX_ASPECT_ADJUST : G_EX_ASPECT_AUTO;
 
     if (gRaceCameras[gCurrentViewportIndex].initialized.value != 0) {
         id |= PROJECTION_VIEWPORT_RACE_CONTEXT_BIT;
@@ -237,6 +257,7 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
     s16 top;
     s32 i;
     s32 splitFrame = 0;
+    s32 trainingFrame = trainingViewportTransitionScale(0) != 0.0f;
     s32 raceFrame = 0;
     f32 aspectScale = recomp_get_target_aspect_ratio(4.0f / 3.0f) / (4.0f / 3.0f);
 
@@ -255,7 +276,7 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
     gDPPipeSync(gRegionAllocPtr++);
     gEXSetViewportAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, 0, 0);
     gEXSetRectAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, G_EX_ORIGIN_NONE, 0, 0, 0, 0);
-    gEXSetRectAspect(gRegionAllocPtr++, splitFrame ? G_EX_ASPECT_ADJUST : G_EX_ASPECT_AUTO);
+    gEXSetRectAspect(gRegionAllocPtr++, (splitFrame || trainingFrame) ? G_EX_ASPECT_ADJUST : G_EX_ASPECT_AUTO);
     gEXSetScissorAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, G_EX_ORIGIN_NONE,
                       0, 0, 0, 0, 0, 0, FRAMEBUFFER_WIDTH, FRAMEBUFFER_HEIGHT);
     gDPSetScissor(
@@ -276,6 +297,14 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
         if (gViewportStates[gCurrentViewportIndex].screenBoundsValid != 0) {
             gCurrentFrameRenderData->viewport.viewports[gCurrentViewportIndex] =
                 gViewportStates[gCurrentViewportIndex].viewport;
+            // @recomp A nonzero scale selects training's opening transition so viewport width expands gradually.
+            if (trainingViewportTransitionScale(gCurrentViewportIndex) != 0.0f) {
+                Vp *viewport = &gCurrentFrameRenderData->viewport.viewports[gCurrentViewportIndex];
+                f32 scale = trainingViewportTransitionScale(gCurrentViewportIndex);
+                // @recomp Use a centred explicit viewport origin to bypass RT64's abrupt automatic widescreen switch.
+                viewport->vp.vscale[0] = (s16)(viewport->vp.vscale[0] * scale + 0.5f);
+                viewport->vp.vtrans[0] -= FRAMEBUFFER_WIDTH * 2;
+            }
             if (raceViewportUsesColumns(gCurrentViewportIndex)) {
                 Vp *viewport = &gCurrentFrameRenderData->viewport.viewports[gCurrentViewportIndex];
                 f32 center = (viewport->vp.vtrans[0] - FRAMEBUFFER_WIDTH * 2) * aspectScale;
@@ -294,6 +323,18 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
                 gViewportStates[gCurrentViewportIndex].projectionMatrix;
             gCurrentFrameRenderData->viewport.overlayProjections[gCurrentViewportIndex] =
                 gViewportStates[gCurrentViewportIndex].overlayProjectionMatrix;
+            // @recomp Adjust both projections only during training's opening transition to match the expanding viewport.
+            if (trainingViewportTransitionScale(gCurrentViewportIndex) != 0.0f) {
+                f32 projection[4][4];
+                f32 scale = trainingViewportTransitionScale(gCurrentViewportIndex);
+                // @recomp Offset RT64's full aspect correction while training's viewport is still expanding.
+                guMtxL2F(projection, &gCurrentFrameRenderData->viewport.projections[gCurrentViewportIndex]);
+                projection[0][0] *= aspectScale / scale;
+                guMtxF2L(projection, &gCurrentFrameRenderData->viewport.projections[gCurrentViewportIndex]);
+                guMtxL2F(projection, &gCurrentFrameRenderData->viewport.overlayProjections[gCurrentViewportIndex]);
+                projection[0][0] *= aspectScale / scale;
+                guMtxF2L(projection, &gCurrentFrameRenderData->viewport.overlayProjections[gCurrentViewportIndex]);
+            }
 
             left = gViewportStates[gCurrentViewportIndex].left;
             top = gViewportStates[gCurrentViewportIndex].top;
@@ -520,6 +561,17 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
             if (gViewportStates[gCurrentViewportIndex].overlayAlpha != 0) {
                 gEXSetRectAspect(gRegionAllocPtr++, G_EX_ASPECT_AUTO);
                 gEXSetRectAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, G_EX_ORIGIN_NONE, 0, 0, 0, 0);
+                // @recomp Align the shade to the animated side bounds only during training's opening transition.
+                if (trainingViewportTransitionScale(gCurrentViewportIndex) != 0.0f) {
+                    ViewportState *viewport = &gViewportStates[gCurrentViewportIndex];
+                    f32 scale = trainingViewportTransitionScale(gCurrentViewportIndex);
+                    s32 inset = (s32)(FRAMEBUFFER_WIDTH / 2 +
+                                      (viewport->left - FRAMEBUFFER_WIDTH / 2) * scale / aspectScale + 0.5f);
+                    gEXSetRectAspect(gRegionAllocPtr++, G_EX_ASPECT_STRETCH);
+                    gEXSetRectAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, G_EX_ORIGIN_NONE,
+                                   (inset - viewport->left) * 4, 0,
+                                   (FRAMEBUFFER_WIDTH - inset - viewport->right) * 4, 0);
+                }
                 gSPDisplayList(gRegionAllocPtr++, gTranslucentOverlaySetupDisplayList);
                 gDPSetPrimColor(
                     gRegionAllocPtr++,
@@ -546,6 +598,10 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
             }
 
             gRenderMatricesDirty = 0;
+            if (trainingFrame) {
+                // @recomp Restore native menu clipping after the training viewport's output-space scissor.
+                gEXSetScissorAspect(gRegionAllocPtr++, G_EX_ASPECT_AUTO);
+            }
             gEXSetRectAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, G_EX_ORIGIN_NONE, 0, 0, 0, 0);
         }
     }
@@ -559,7 +615,7 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
     drawRaceViewportDividers();
     gEXSetScissorAlign(gRegionAllocPtr++, G_EX_ORIGIN_LEFT, G_EX_ORIGIN_RIGHT,
                       0, 0, -FRAMEBUFFER_WIDTH, 0, 0, 0, FRAMEBUFFER_WIDTH, FRAMEBUFFER_HEIGHT);
-    gEXSetRectAspect(gRegionAllocPtr++, splitFrame ? G_EX_ASPECT_ADJUST : G_EX_ASPECT_AUTO);
+    gEXSetRectAspect(gRegionAllocPtr++, (splitFrame || trainingFrame) ? G_EX_ASPECT_ADJUST : G_EX_ASPECT_AUTO);
 
     if ((gMenuForegroundRenderCallbackList != NULL) || (gMenuRenderCallbackList != NULL)) {
         if (!raceFrame) {
