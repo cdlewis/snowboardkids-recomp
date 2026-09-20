@@ -201,8 +201,9 @@ RECOMP_PATCH void drawMenuTilemapSprite(
                             render->tileHeight,
                             0,
                             0,
-                            render->tileWidth,
-                            render->tileHeight,
+                            // @recomp Exclude the extra row and column from the inclusive load bounds.
+                            render->tileWidth - 1,
+                            render->tileHeight - 1,
                             paletteIndex,
                             G_TX_CLAMP,
                             G_TX_CLAMP,
@@ -224,8 +225,9 @@ RECOMP_PATCH void drawMenuTilemapSprite(
                             render->tileHeight,
                             0,
                             0,
-                            render->tileWidth,
-                            render->tileHeight,
+                            // @recomp Exclude the extra row and column from the inclusive load bounds.
+                            render->tileWidth - 1,
+                            render->tileHeight - 1,
                             0,
                             G_TX_CLAMP,
                             G_TX_CLAMP,

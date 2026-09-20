@@ -21,7 +21,7 @@ extern u8 gRaceUpdatePaused;
 
 static u16 nextFallingRockSpawnId;
 
-RECOMP_PATCH void renderPatrolCourseObject(PatrolCourseObjectEffect *arg0) {
+RECOMP_PATCH void renderPatrolPenguin(PatrolPenguinActor *arg0) {
     s32 sine;
     s32 doubleSine;
     Transform3D transform;
@@ -69,7 +69,7 @@ RECOMP_PATCH void renderPatrolCourseObject(PatrolCourseObjectEffect *arg0) {
     }
 }
 
-RECOMP_PATCH void renderThrownPickupModel(ThrownPickupRenderActor *arg0) {
+RECOMP_PATCH void renderFallingRock(FallingRockActor *arg0) {
     struct {
         Transform3D transform;
         s16 unused[2];
@@ -96,7 +96,7 @@ RECOMP_PATCH void renderThrownPickupModel(ThrownPickupRenderActor *arg0) {
             // @recomp Use the rock spawn ID and viewport so recycled task slots never match the previous rock.
             gEXMatrixGroupSimple(gRegionAllocPtr++, MODELVIEW_SUNSET_FALLING_ROCK_ID_BASE |
                                  ((u32)gCurrentViewportIndex << MODELVIEW_SUNSET_VIEWPORT_SHIFT) |
-                                 ((CallbackTaskHeader *)arg0)->userId,
+                                 arg0->task.userId,
                                  G_EX_PUSH, G_MTX_MODELVIEW,
                                  G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_SKIP,
                                  G_EX_COMPONENT_SKIP, G_EX_COMPONENT_AUTO, G_EX_ORDER_LINEAR, G_EX_EDIT_NONE,
@@ -111,23 +111,23 @@ RECOMP_PATCH void renderThrownPickupModel(ThrownPickupRenderActor *arg0) {
     }
 }
 
-RECOMP_PATCH void initThrownPickupModel(ThrownPickupModelActor *arg0) {
+RECOMP_PATCH void initFallingRock(FallingRockActor *arg0) {
     // @recomp Preserve the decomp scratch layout; Scratch674B4 is private to its source file.
     struct {
         Transform3D transform;
         s32 pad[3];
     } sp1C;
-    ThrownPickupModelActor *temp_a3 = arg0;
+    FallingRockActor *temp_a3 = arg0;
 
     if (gRaceUpdatePaused == 0) {
         // @recomp The rock never uses task.userId; assign a new lifetime ID before its first render.
-        ((CallbackTaskHeader *)temp_a3)->userId = ++nextFallingRockSpawnId;
-        makeFixedRotationY(sp1C.transform.rotation, temp_a3->modelIndex);
+        temp_a3->task.userId = ++nextFallingRockSpawnId;
+        makeFixedRotationY(sp1C.transform.rotation, temp_a3->yaw);
         temp_a3->timer = 0x32;
         temp_a3->velocity.x = 0;
         temp_a3->velocity.y = 0xB0000;
         temp_a3->velocity.z = 0xFFF90000;
         transformVec3iByFixedMatrix(sp1C.transform.rotation, &temp_a3->velocity, &temp_a3->transformedPos);
-        setCallbackTaskCallback(temp_a3, (CallbackTaskCallback)updateThrownPickupModel);
+        setCallbackTaskCallback(temp_a3, (CallbackTaskCallback)updateFallingRock);
     }
 }

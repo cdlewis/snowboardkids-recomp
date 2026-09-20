@@ -54,7 +54,7 @@ static void pushSnowSprayMatrixGroup(RaceItemFollowActor *actor, u32 base, u32 s
                          G_EX_ORDER_LINEAR, G_EX_EDIT_NONE, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP);
 }
 
-RECOMP_PATCH void renderRacePlayerSnowSpray(RaceItemFollowActor *arg0) {
+RECOMP_PATCH void renderRacePlayerYellowTrickSparkles(RaceItemFollowActor *arg0) {
     Transform3D sp90;
     void *sp8C;
     void *sp88;
@@ -102,7 +102,7 @@ RECOMP_PATCH void renderRacePlayerSnowSpray(RaceItemFollowActor *arg0) {
             pushSnowSprayMatrixGroup(arg0, MODELVIEW_SNOW_SPRAY_ID_BASE, 0);
             RACE_ITEM_GFX_CMD(gRegionAllocPtr++, 0x01020040, (u32)arg0->matrix1);
             RACE_ITEM_GFX_CMD(gRegionAllocPtr++, 0x01000040, (u32)gViewportMatrix);
-            RACE_ITEM_GFX_CMD(gRegionAllocPtr++, 0x0400103F, (u32)gRacePlayerSnowSprayQuadVertices);
+            RACE_ITEM_GFX_CMD(gRegionAllocPtr++, 0x0400103F, (u32)gRacePlayerYellowTrickSparklesQuadVertices);
             RACE_ITEM_GFX_CMD(gRegionAllocPtr++, 0xB1060402, 0x60200);
             // @recomp Pop this matrix group so subsequent draws cannot inherit this sprite's interpolation identity.
             gEXPopMatrixGroup(gRegionAllocPtr++, G_MTX_MODELVIEW);
@@ -110,7 +110,7 @@ RECOMP_PATCH void renderRacePlayerSnowSpray(RaceItemFollowActor *arg0) {
             pushSnowSprayMatrixGroup(arg0, MODELVIEW_SNOW_SPRAY_ID_BASE, 1);
             RACE_ITEM_GFX_CMD(gRegionAllocPtr++, 0x01020040, (u32)arg0->matrix2);
             RACE_ITEM_GFX_CMD(gRegionAllocPtr++, 0x01000040, (u32)gViewportMatrix);
-            RACE_ITEM_GFX_CMD(gRegionAllocPtr++, 0x0400103F, (u32)gRacePlayerSnowSprayQuadVertices);
+            RACE_ITEM_GFX_CMD(gRegionAllocPtr++, 0x0400103F, (u32)gRacePlayerYellowTrickSparklesQuadVertices);
             RACE_ITEM_GFX_CMD(gRegionAllocPtr++, 0xB1060402, 0x60200);
             // @recomp Pop this matrix group so subsequent draws cannot inherit this sprite's interpolation identity.
             gEXPopMatrixGroup(gRegionAllocPtr++, G_MTX_MODELVIEW);
@@ -118,7 +118,7 @@ RECOMP_PATCH void renderRacePlayerSnowSpray(RaceItemFollowActor *arg0) {
     }
 }
 
-RECOMP_PATCH void renderRacePlayerLandingSnowSpray(RaceItemFollowActor *arg0) {
+RECOMP_PATCH void renderRacePlayerBlueTrickSparkles(RaceItemFollowActor *arg0) {
     Transform3D sp98;
     void *sp94;
     void *sp90;
@@ -167,7 +167,7 @@ RECOMP_PATCH void renderRacePlayerLandingSnowSpray(RaceItemFollowActor *arg0) {
             pushSnowSprayMatrixGroup(arg0, MODELVIEW_LANDING_SNOW_SPRAY_ID_BASE, 0);
             RACE_ITEM_GFX_CMD(gRegionAllocPtr++, 0x01020040, (u32)arg0->matrix1);
             RACE_ITEM_GFX_CMD(gRegionAllocPtr++, 0x01000040, (u32)gViewportMatrix);
-            RACE_ITEM_GFX_CMD(gRegionAllocPtr++, 0x0400103F, (u32)gRacePlayerLandingSnowSprayQuadVertices);
+            RACE_ITEM_GFX_CMD(gRegionAllocPtr++, 0x0400103F, (u32)gRacePlayerBlueTrickSparklesQuadVertices);
             RACE_ITEM_GFX_CMD(gRegionAllocPtr++, 0xB1060402, 0x60200);
             // @recomp Pop this matrix group so subsequent draws cannot inherit this sprite's interpolation identity.
             gEXPopMatrixGroup(gRegionAllocPtr++, G_MTX_MODELVIEW);
@@ -175,7 +175,7 @@ RECOMP_PATCH void renderRacePlayerLandingSnowSpray(RaceItemFollowActor *arg0) {
             pushSnowSprayMatrixGroup(arg0, MODELVIEW_LANDING_SNOW_SPRAY_ID_BASE, 1);
             RACE_ITEM_GFX_CMD(gRegionAllocPtr++, 0x01020040, (u32)arg0->matrix2);
             RACE_ITEM_GFX_CMD(gRegionAllocPtr++, 0x01000040, (u32)gViewportMatrix);
-            RACE_ITEM_GFX_CMD(gRegionAllocPtr++, 0x0400103F, (u32)gRacePlayerLandingSnowSprayQuadVertices);
+            RACE_ITEM_GFX_CMD(gRegionAllocPtr++, 0x0400103F, (u32)gRacePlayerBlueTrickSparklesQuadVertices);
             RACE_ITEM_GFX_CMD(gRegionAllocPtr++, 0xB1060402, 0x60200);
             // @recomp Pop this matrix group so subsequent draws cannot inherit this sprite's interpolation identity.
             gEXPopMatrixGroup(gRegionAllocPtr++, G_MTX_MODELVIEW);
@@ -183,7 +183,7 @@ RECOMP_PATCH void renderRacePlayerLandingSnowSpray(RaceItemFollowActor *arg0) {
     }
 }
 
-RECOMP_PATCH void initRacePlayerSnowSpray(RaceItemFollowActor *arg0) {
+RECOMP_PATCH void initRacePlayerYellowTrickSparkles(RaceItemFollowActor *arg0) {
     RacePlayer *player;
 
     // @recomp Give each actor a unique id
@@ -205,11 +205,11 @@ RECOMP_PATCH void initRacePlayerSnowSpray(RaceItemFollowActor *arg0) {
         arg0->offset2.y = player->groundMarkerSources[3].y - player->unk28.y;
         arg0->offset2.z = player->groundMarkerSources[3].z - player->unk28.z;
     }
-    updateRacePlayerSnowSpray(arg0);
-    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRacePlayerSnowSpray);
+    updateRacePlayerYellowTrickSparkles(arg0);
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRacePlayerYellowTrickSparkles);
 }
 
-RECOMP_PATCH void initRacePlayerLandingSnowSpray(RaceItemFollowActor *arg0) {
+RECOMP_PATCH void initRacePlayerBlueTrickSparkles(RaceItemFollowActor *arg0) {
     RacePlayer *player;
 
     // @recomp Give each actor a unique id
@@ -231,8 +231,8 @@ RECOMP_PATCH void initRacePlayerLandingSnowSpray(RaceItemFollowActor *arg0) {
         arg0->offset2.y = player->groundMarkerSources[3].y - player->unk28.y;
         arg0->offset2.z = player->groundMarkerSources[3].z - player->unk28.z;
     }
-    updateRacePlayerLandingSnowSpray(arg0);
-    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRacePlayerLandingSnowSpray);
+    updateRacePlayerBlueTrickSparkles(arg0);
+    setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRacePlayerBlueTrickSparkles);
 }
 
 static u16 nextGroundSpraySpawnId;
