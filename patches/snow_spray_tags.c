@@ -246,7 +246,7 @@ RECOMP_PATCH void initRaceItemSparkBurst(RaceItemSparkBurstActor *arg0) {
         spawnId[1] = nextGroundSpraySpawnId;
     }
     arg0->timer = 0;
-    updateRaceItemSparkBurst(arg0);
+    // @recomp Defer draw-list insertion until the next task update so new puffs do not lead the interpolated board.
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRaceItemSparkBurst);
 }
 
