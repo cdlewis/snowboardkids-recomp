@@ -180,8 +180,6 @@ jobs:
 
       - name: Prepare Archive
         run: |
-          cmake -DOUTPUT_DIR=cmake-build/assets -P scripts/stage-assets.cmake
-          cp recompcontrollerdb.txt cmake-build/
           tar -czf SnowboardKidsRecompiled.tar.gz -C cmake-build SnowboardKidsRecompiled assets/ recompcontrollerdb.txt
 
       - name: Archive SnowboardKidsRecomp
@@ -365,8 +363,6 @@ jobs:
 
       - name: Prepare Archive
         run: |
-          cmake -DOUTPUT_DIR=cmake-build/assets -P scripts/stage-assets.cmake
-          cp recompcontrollerdb.txt cmake-build/
           tar -czf SnowboardKidsRecompiled.tar.gz -C cmake-build SnowboardKidsRecompiled assets/ recompcontrollerdb.txt
 
       - name: Archive SnowboardKidsRecomp
@@ -499,9 +495,6 @@ jobs:
 
       - name: Prepare Archive
         run: |
-          cmake -DOUTPUT_DIR=cmake-build/assets -P scripts/stage-assets.cmake
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          Copy-Item -Path "recompcontrollerdb.txt" -Destination "cmake-build/recompcontrollerdb.txt"
           Move-Item -Path "cmake-build/SnowboardKidsRecompiled.pdb" -Destination "SnowboardKidsRecompiled.pdb"
 
       - name: Archive SnowboardKidsRecomp

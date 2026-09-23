@@ -499,4 +499,23 @@ endif()
 
 target_sources(SnowboardKidsRecompiled PRIVATE ${SOURCES})
 
-set_property(TARGET SnowboardKidsRecompiled PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+if (WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    # Refresh runtime assets even when the executable does not need to relink.
+    add_custom_target(StageRuntimeAssets
+        COMMAND ${CMAKE_COMMAND}
+            "-DOUTPUT_DIR=$<TARGET_FILE_DIR:SnowboardKidsRecompiled>/assets"
+            -P "${CMAKE_SOURCE_DIR}/scripts/stage-assets.cmake"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/recompcontrollerdb.txt"
+            "$<TARGET_FILE_DIR:SnowboardKidsRecompiled>/recompcontrollerdb.txt"
+        VERBATIM
+    )
+    add_dependencies(SnowboardKidsRecompiled StageRuntimeAssets)
+endif()
+
+if (WIN32)
+    set_property(TARGET SnowboardKidsRecompiled PROPERTY
+        VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:SnowboardKidsRecompiled>")
+else()
+    set_property(TARGET SnowboardKidsRecompiled PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+endif()

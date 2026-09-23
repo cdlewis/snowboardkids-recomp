@@ -19,8 +19,8 @@ chmod a+x linuxdeploy*
 
 mkdir -p AppDir/usr/bin
 cp cmake-build/SnowboardKidsRecompiled AppDir/usr/bin/ || exit 1
-cmake -DOUTPUT_DIR=AppDir/usr/bin/assets -P scripts/stage-assets.cmake || exit 1
-cp recompcontrollerdb.txt AppDir/usr/bin/
+cp -R cmake-build/assets AppDir/usr/bin/ || exit 1
+cp cmake-build/recompcontrollerdb.txt AppDir/usr/bin/ || exit 1
 cp icons/512.png AppDir/SnowboardKidsRecompiled.png
 cp .github/linux/SnowboardKidsRecompiled.desktop AppDir/
 
