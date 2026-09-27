@@ -134,7 +134,7 @@ void zelda64::init_config() {
     general_config.add_enum_option(
         two_player_split_screen_direction_option,
         "2-Player Split-Screen Direction",
-        "Sets whether two-player races use a top/bottom or left/right split.",
+        "Sets whether two-player races use a top/bottom or left/right split. Changes take effect at the start of the next race.",
         two_player_split_screen_direction_options,
         TwoPlayerSplitScreenDirection::Vertical
     );

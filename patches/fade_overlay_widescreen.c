@@ -141,11 +141,17 @@ static void drawRaceViewportDividers(void) {
         // Use output-edge origins rather than the independently configured HUD width.
         gEXSetRectAspect(gRegionAllocPtr++, G_EX_ASPECT_ADJUST);
         gEXSetRectAlign(gRegionAllocPtr++, G_EX_ORIGIN_LEFT, G_EX_ORIGIN_RIGHT,
-                       0, 0, -(FRAMEBUFFER_WIDTH - 1) * 4, 0);
+                       0, 0, -FRAMEBUFFER_WIDTH * 4, 0);
     }
     if (viewportCount >= 3 || !raceUsesVerticalTwoPlayerSplit()) {
+        // Use the vertical divider's one-cycle drawing path to keep subsequent pause
+        // and progress-meter sprites visible. Adjust for exclusive rectangle endpoints.
+        gDPSetCycleType(gRegionAllocPtr++, G_CYC_1CYCLE);
+        gDPSetRenderMode(gRegionAllocPtr++, G_RM_OPA_SURF, G_RM_OPA_SURF2);
+        gDPSetCombineMode(gRegionAllocPtr++, G_CC_PRIMITIVE, G_CC_PRIMITIVE);
+        gDPSetPrimColor(gRegionAllocPtr++, 0, 0, 0, 0, 0, 255);
         gDPFillRectangle(gRegionAllocPtr++, 0, FRAMEBUFFER_HEIGHT / 2 - 1,
-                         FRAMEBUFFER_WIDTH - 1, FRAMEBUFFER_HEIGHT / 2);
+                         FRAMEBUFFER_WIDTH, FRAMEBUFFER_HEIGHT / 2 + 1);
     }
 
     if (viewportCount >= 3 || raceUsesVerticalTwoPlayerSplit()) {
