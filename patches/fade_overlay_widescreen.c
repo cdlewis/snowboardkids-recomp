@@ -213,7 +213,7 @@ static s32 viewportCameraRotationCut(u32 base) {
         dotSum += (s32)history->rotation[i] * rotation[i];
         history->rotation[i] = rotation[i];
     }
-    // @recomp Skip interpolation if the previous rendered frame is missing or its camera history was invalidated.
+    // Skip interpolation if the previous rendered frame is missing or its camera history was invalidated.
     // Otherwise, treat rotations over 20 degrees as cuts unless both frames share the same mode and
     // update callback for an intro flyby or scripted tracking shot, whose continuous turns are interpolated.
     cut = !history->valid || history->frame + 1 != sViewportRenderFrame ||

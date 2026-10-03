@@ -30,17 +30,24 @@ void anchorVerticalHudGroup(s32 side) {
     f32 shift = (center - 160.0f) * (aspectScale - 1.0f) + side * (height * safeAspect * 0.5f - 80.0f);
     s32 offset = (s32)(shift * 4.0f + (shift < 0.0f ? -0.5f : 0.5f));
 
+    // Explicit centre alignment enables RT64 texture-grid correction, preventing repeated texture-edge columns.
+    s32 origin = side != 0 ? G_EX_ORIGIN_CENTER : G_EX_ORIGIN_NONE;
+    // Compensate for the native centre added by the explicit origin without changing HUD placement.
+    if (side != 0) {
+        offset -= 160 * 4;
+    }
+
     gEXSetRectAspect(gRegionAllocPtr++, G_EX_ASPECT_ADJUST);
-    gEXSetRectAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, G_EX_ORIGIN_NONE, offset, 0, offset, 0);
+    gEXSetRectAlign(gRegionAllocPtr++, origin, origin, offset, 0, offset, 0);
 }
 
-// Keep the original row layout; vertical races place the same groups in their viewport's four corners.
 RECOMP_PATCH void drawTwoPlayerRaceHud(void *arg0) {
     s32 y;
     s32 x;
     s32 color;
     char *ptr;
     char buffer[32];
+    // @recomp Select corner placement only for the vertical two-player race layout.
     s32 vertical = raceUsesVerticalTwoPlayerSplit();
 
     if (gCurrentViewportIndex == 0) {
@@ -49,13 +56,18 @@ RECOMP_PATCH void drawTwoPlayerRaceHud(void *arg0) {
         y = 0x1A;
     }
 
+    // @recomp Move the vertical score group to the bottom-right corner.
     if (vertical) {
-        y = 88;
+        // @recomp Keep the 16-pixel coin and score eight pixels above the viewport bottom.
+        y = 96;
+        // @recomp Anchor the score, coin and following item boxes to this viewport's right HUD edge.
         anchorVerticalHudGroup(1);
     }
 
+    // @recomp Use the game formatter wrapper because patch calls to sprintf do not resolve.
     _Sprintf(buffer, gRaceHudTwoPlayerScoreFormat, gRacePlayers[gCurrentViewportIndex].score);
-    x = vertical ? 8 : 0x50;
+    // @recomp Keep the five score digits immediately left of the coin at the vertical right inset.
+    x = vertical ? 16 : 0x50;
     ptr = buffer;
     if (gRacePlayers[gCurrentViewportIndex].score < 0x64) {
         color = 0x10;
@@ -75,10 +87,12 @@ RECOMP_PATCH void drawTwoPlayerRaceHud(void *arg0) {
         }
         ptr++;
         x += 8;
+        // @recomp Draw the original five score characters without depending on an adjacent stack variable.
     } while (ptr != buffer + 5);
 
     drawAssetTableSprite(
-        vertical ? 48 : 0x78,
+        // @recomp Place the 16-pixel coin eight pixels inside the vertical right HUD edge.
+        vertical ? 56 : 0x78,
         y,
         getRelocatableHeapBlockBase(RACE_HUD_MAIN_FONT_HANDLE),
         (gRaceHudCoinSpinnerFrame >> 1) + 4
@@ -86,8 +100,10 @@ RECOMP_PATCH void drawTwoPlayerRaceHud(void *arg0) {
 
     if (gRacePlayers[gCurrentViewportIndex].itemEffectPalette != 0) {
         drawScaledAssetTableSprite(
+            // @recomp Place the first item box beside the second at the vertical right HUD edge.
             vertical ? 8 : -0x88,
-            vertical ? -96 : -0x30,
+            // @recomp Place the vertical item box eight pixels below the viewport top.
+            vertical ? -112 : -0x30,
             getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
             gRaceHudItemEffectTileOffsets[gRacePlayers[gCurrentViewportIndex].itemEffectType] +
                 gRacePlayers[gCurrentViewportIndex].itemEffectCount - 1,
@@ -95,8 +111,10 @@ RECOMP_PATCH void drawTwoPlayerRaceHud(void *arg0) {
         );
     } else {
         drawAssetTableSprite(
+            // @recomp Place the first item box beside the second at the vertical right HUD edge.
             vertical ? 8 : -0x88,
-            vertical ? -96 : -0x30,
+            // @recomp Place the vertical item box eight pixels below the viewport top.
+            vertical ? -112 : -0x30,
             getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
             gRaceHudItemEffectTileOffsets[gRacePlayers[gCurrentViewportIndex].itemEffectType] +
                 gRacePlayers[gCurrentViewportIndex].itemEffectCount - 1
@@ -105,26 +123,34 @@ RECOMP_PATCH void drawTwoPlayerRaceHud(void *arg0) {
 
     if (gRacePlayers[gCurrentViewportIndex].actionEffectPalette != 0) {
         drawScaledAssetTableSprite(
+            // @recomp Keep the second 32-pixel item box eight pixels inside the vertical right HUD edge.
             vertical ? 40 : -0x68,
-            vertical ? -96 : -0x30,
+            // @recomp Place the vertical item box eight pixels below the viewport top.
+            vertical ? -112 : -0x30,
             getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
             gRaceHudActionEffectTileIds[gRacePlayers[gCurrentViewportIndex].actionEffectType],
             gRacePlayers[gCurrentViewportIndex].actionEffectPalette
         );
     } else {
         drawAssetTableSprite(
+            // @recomp Keep the second 32-pixel item box eight pixels inside the vertical right HUD edge.
             vertical ? 40 : -0x68,
-            vertical ? -96 : -0x30,
+            // @recomp Place the vertical item box eight pixels below the viewport top.
+            vertical ? -112 : -0x30,
             getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
             gRaceHudActionEffectTileIds[gRacePlayers[gCurrentViewportIndex].actionEffectType]
         );
     }
 
+    // @recomp Switch the vertical rank and lap groups to this viewport's left HUD edge.
     if (vertical) {
+        // @recomp Apply the left anchor before drawing the rank and lap label.
         anchorVerticalHudGroup(-1);
     }
     drawAssetTableSprite(
-        vertical ? -68 : -0x88,
+        // @recomp Align the vertical rank sprite with the lap label at the eight-pixel left inset.
+        vertical ? -72 : -0x88,
+        // @recomp Keep the 32-pixel vertical rank sprite eight pixels above the viewport bottom.
         vertical ? 80 : 0x12,
         getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
         gRacePlayers[gCurrentViewportIndex].rankIndex
@@ -135,11 +161,16 @@ RECOMP_PATCH void drawTwoPlayerRaceHud(void *arg0) {
     } else {
         y = 0x2A;
     }
+    // @recomp Move the vertical lap display to the top-left corner.
     if (vertical) {
-        y = -96;
+        // @recomp Match the item boxes with an eight-pixel top inset.
+        y = -112;
     }
-    drawAssetTableSprite(vertical ? -68 : 0x58, y, getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE), 0x1A);
+    // @recomp Place the vertical lap label at the same eight-pixel left inset as the rank.
+    drawAssetTableSprite(vertical ? -72 : 0x58, y, getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE), 0x1A);
+    // @recomp Restore centred alignment so later overlay draws do not inherit the left HUD anchor.
     if (vertical) {
+        // @recomp Reset the vertical viewport's rectangle origin and offset.
         anchorVerticalHudGroup(0);
     }
 }
@@ -148,6 +179,7 @@ RECOMP_PATCH void drawTwoPlayerLapCounter(void *arg0) {
     s32 y;
     s32 viewportIndex;
 
+    // @recomp Select corner placement only for the vertical two-player race layout.
     s32 vertical = raceUsesVerticalTwoPlayerSplit();
 
     viewportIndex = gCurrentViewportIndex;
@@ -157,14 +189,22 @@ RECOMP_PATCH void drawTwoPlayerLapCounter(void *arg0) {
         y = 0x2A;
     }
 
+    // @recomp Move the vertical lap display to the top-left corner.
     if (vertical) {
-        y = -96;
+        // @recomp Match the item boxes with an eight-pixel top inset.
+        y = -112;
+        // @recomp Use the same left HUD anchor as the lap label.
         anchorVerticalHudGroup(-1);
     }
-    drawMenuAsciiCharImpl(vertical ? -44 : 0x70, (s16)y, gRacePlayers[viewportIndex].lapDigit + '1', 2);
-    drawMenuAsciiCharImpl(vertical ? -36 : 0x78, (s16)y, '/', 2);
-    drawMenuAsciiCharImpl(vertical ? -28 : 0x80, (s16)y, gRaceLapCount + '0', 2);
+    // @recomp Position the vertical current lap digit and use the exported implementation of the weak ASCII alias.
+    drawMenuAsciiCharImpl(vertical ? -48 : 0x70, (s16)y, gRacePlayers[viewportIndex].lapDigit + '1', 2);
+    // @recomp Position the vertical lap separator and use the exported implementation of the weak ASCII alias.
+    drawMenuAsciiCharImpl(vertical ? -40 : 0x78, (s16)y, '/', 2);
+    // @recomp Position the vertical total lap digit and use the exported implementation of the weak ASCII alias.
+    drawMenuAsciiCharImpl(vertical ? -32 : 0x80, (s16)y, gRaceLapCount + '0', 2);
+    // @recomp Restore centred alignment so later overlay draws do not inherit the left HUD anchor.
     if (vertical) {
+        // @recomp Reset the vertical viewport's rectangle origin and offset.
         anchorVerticalHudGroup(0);
     }
 }
