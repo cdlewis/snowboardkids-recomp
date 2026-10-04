@@ -544,6 +544,11 @@ jobs:
         with:
           key: ${{ runner.os }}-sk1re-ccache-${{ matrix.type }}
 
+      - name: Install Metal Toolchain
+        run: |
+          xcodebuild -downloadComponent MetalToolchain
+          xcrun -sdk macosx metal --version
+
       - name: Homebrew Setup
         run: |
           brew install ninja
