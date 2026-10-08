@@ -10,6 +10,7 @@
 #include "podium_scene.h"
 #include "training_viewport.h"
 #include "game/menu/main_menu/training_course_race_flow.h"
+#include "game/menu/main_menu/main_menu_race_flow.h"
 
 extern s32 recomp_get_vertical_2p_split_screen_enabled(void);
 static s32 sVerticalTwoPlayerSplit;
@@ -35,10 +36,12 @@ f32 trainingViewportTransitionScale(s32 index) {
 
 static f32 configureTrainingViewportTransition(s32 index) {
     if (index == 0 && gCurrentGameTask != NULL) {
-        if (gCurrentGameTask->callbacks[0] == initTrainingCourseRace) {
+        if (gCurrentGameTask->callbacks[0] == initTrainingCourseRace ||
+            gCurrentGameTask->callbacks[0] == initMainMenuModePreviewRace) {
             return 0.0f;
         }
-        if (gCurrentGameTask->callbacks[0] == zoomTrainingCourseRaceViewport &&
+        if ((gCurrentGameTask->callbacks[0] == zoomTrainingCourseRaceViewport ||
+             gCurrentGameTask->callbacks[0] == zoomMainMenuModePreviewRaceViewport) &&
             gCurrentGameTask->callbackData0 > 0 && gCurrentGameTask->callbackData0 <= 16) {
             return gCurrentGameTask->callbackData0 / 16.0f;
         }
