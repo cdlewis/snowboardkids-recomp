@@ -12,6 +12,7 @@
 #include "game/race/camera/race_camera.h"
 #include "game/math/fixed_point_math.h"
 #include "game/race/ui/race_hud.h"
+#include "game/menu/main_menu/main_menu_panel_ui.h"
 
 extern s16 gUiBlinkTimer;
 extern s16 gMenuViewportWidth;
@@ -263,9 +264,24 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
     s16 top;
     s32 i;
     s32 splitFrame = 0;
-    s32 trainingFrame = trainingViewportTransitionScale(0) != 0.0f;
+    s32 trainingViewportTransitionActive = trainingViewportTransitionScale(0) != 0.0f;
     s32 raceFrame = 0;
+    s32 roundedPreviewHorizontalClipInset = 0;
     f32 aspectScale = recomp_get_target_aspect_ratio(4.0f / 3.0f) / (4.0f / 3.0f);
+
+    // @recomp Detect viewport 0's rounded preview from the corner-mask draw callback queued for this frame.
+    // Other menus share its viewport dimensions; the training transition already adjusts its own clip.
+    if (!trainingViewportTransitionActive) {
+        for (RenderCallbackNode *menuCallback = gMenuRenderCallbackList; menuCallback != NULL;
+             menuCallback = menuCallback->next) {
+            if (menuCallback->callback == drawRaceSetupPreviewCornerMasks) {
+                // @recomp Clip one native N64 pixel from each horizontal scene edge beneath the black corner masks.
+                // RT64 rounds scene scissors outward at fractional output positions, exposing edge pixels.
+                roundedPreviewHorizontalClipInset = 1;
+                break;
+            }
+        }
+    }
 
     sViewportRenderFrame++;
     for (i = 0; i < VIEWPORT_COUNT; i++) {
@@ -282,7 +298,8 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
     gDPPipeSync(gRegionAllocPtr++);
     gEXSetViewportAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, 0, 0);
     gEXSetRectAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, G_EX_ORIGIN_NONE, 0, 0, 0, 0);
-    gEXSetRectAspect(gRegionAllocPtr++, (splitFrame || trainingFrame) ? G_EX_ASPECT_ADJUST : G_EX_ASPECT_AUTO);
+    gEXSetRectAspect(gRegionAllocPtr++,
+                     (splitFrame || trainingViewportTransitionActive) ? G_EX_ASPECT_ADJUST : G_EX_ASPECT_AUTO);
     gEXSetScissorAlign(gRegionAllocPtr++, G_EX_ORIGIN_NONE, G_EX_ORIGIN_NONE,
                       0, 0, 0, 0, 0, 0, FRAMEBUFFER_WIDTH, FRAMEBUFFER_HEIGHT);
     gDPSetScissor(
@@ -362,9 +379,11 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
             gDPSetScissor(
                 gRegionAllocPtr++,
                 G_SC_NON_INTERLACE,
-                gViewportStates[gCurrentViewportIndex].left,
+                gViewportStates[gCurrentViewportIndex].left +
+                    (gCurrentViewportIndex == 0 ? roundedPreviewHorizontalClipInset : 0),
                 gViewportStates[gCurrentViewportIndex].top,
-                gViewportStates[gCurrentViewportIndex].right,
+                gViewportStates[gCurrentViewportIndex].right -
+                    (gCurrentViewportIndex == 0 ? roundedPreviewHorizontalClipInset : 0),
                 gViewportStates[gCurrentViewportIndex].bottom
             );
             hasModelCallbacks = 0;
@@ -604,7 +623,7 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
             }
 
             gRenderMatricesDirty = 0;
-            if (trainingFrame) {
+            if (trainingViewportTransitionActive) {
                 // @recomp Restore native menu clipping after the training viewport's output-space scissor.
                 gEXSetScissorAspect(gRegionAllocPtr++, G_EX_ASPECT_AUTO);
             }
@@ -621,7 +640,8 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
     drawRaceViewportDividers();
     gEXSetScissorAlign(gRegionAllocPtr++, G_EX_ORIGIN_LEFT, G_EX_ORIGIN_RIGHT,
                       0, 0, -FRAMEBUFFER_WIDTH, 0, 0, 0, FRAMEBUFFER_WIDTH, FRAMEBUFFER_HEIGHT);
-    gEXSetRectAspect(gRegionAllocPtr++, (splitFrame || trainingFrame) ? G_EX_ASPECT_ADJUST : G_EX_ASPECT_AUTO);
+    gEXSetRectAspect(gRegionAllocPtr++,
+                     (splitFrame || trainingViewportTransitionActive) ? G_EX_ASPECT_ADJUST : G_EX_ASPECT_AUTO);
 
     if ((gMenuForegroundRenderCallbackList != NULL) || (gMenuRenderCallbackList != NULL)) {
         if (!raceFrame) {
