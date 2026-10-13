@@ -16,13 +16,13 @@ permissions:
 
 jobs:
   update-pr-artifacts:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: (github.event.workflow_run.event == 'pull_request' || github.event.workflow_run.event == 'pull_request_target') && github.event.workflow_run.conclusion == 'success'
     name: Update PR Artifacts
     steps:
       - name: Get PR Number
         id: pr-number
-        uses: actions/github-script@v6
+        uses: actions/github-script@v8
         with:
           result-encoding: string
           script: |
@@ -50,7 +50,7 @@ jobs:
 
       - name: Create Artifacts Content
         id: artifacts-content
-        uses: actions/github-script@v6
+        uses: actions/github-script@v8
         with:
           result-encoding: string
           script: |

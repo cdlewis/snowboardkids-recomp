@@ -1,3 +1,5 @@
+set -e
+
 ARCH=$(uname -m)
 LINUX_DEPLOY_ARCH=$(uname -m)
 
@@ -41,4 +43,6 @@ rm -rf AppDir/usr/lib/libgmodule*
 rm -rf AppDir/usr/lib/gio/modules/*.so
 rm -rf AppDir/usr/lib/libwayland*
 
-./deploy/usr/bin/linuxdeploy-plugin-appimage --appdir=AppDir
+LDAI_OUTPUT="SnowboardKidsRecompiled-$LINUX_DEPLOY_ARCH.AppImage" \
+  ./deploy/usr/bin/linuxdeploy-plugin-appimage --appdir=AppDir
+test -s "SnowboardKidsRecompiled-$LINUX_DEPLOY_ARCH.AppImage"

@@ -50,13 +50,13 @@ concurrency:
 
 jobs:
   resolve_version:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       game_version: ${{ steps.resolve.outputs.game_version }}
     steps:
       - name: Checkout
         if: inputs.GAME_VERSION == ''
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
           ref: ${{ github.event.pull_request.head.sha || github.ref }}
@@ -102,7 +102,7 @@ jobs:
     name: ubuntu-22.04 (x64, ${{ matrix.type }}, Native, AppImage)
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
           ref: ${{ github.event.pull_request.head.sha || github.ref }}
@@ -115,7 +115,7 @@ jobs:
           git submodule update --init --recursive
 
       - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2
+        uses: hendrikmuhs/ccache-action@v1.2.24
         with:
           key: ${{ matrix.os }}-sk1re-ccache-${{ matrix.type }}-x64-${{ inputs.N64RECOMP_COMMIT }}
 
@@ -136,7 +136,7 @@ jobs:
           echo ::endgroup::
 
       - name: Checkout baserom
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: cdlewis/snowboardkids-private
           token: ${{ secrets.PRIVATE_REPO_ACCESS }}
@@ -183,7 +183,7 @@ jobs:
           tar -czf SnowboardKidsRecompiled.tar.gz -C cmake-build SnowboardKidsRecompiled assets/ recompcontrollerdb.txt
 
       - name: Archive SnowboardKidsRecomp
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: SnowboardKidsRecompiled-${{ runner.os }}-X64-${{ matrix.type }}
           path: SnowboardKidsRecompiled.tar.gz
@@ -192,15 +192,16 @@ jobs:
         run: bash .github/linux/appimage.sh
 
       - name: SnowboardKidsRecomp AppImage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: SnowboardKidsRecompiled-AppImage-X64-${{ matrix.type }}
           path: SnowboardKidsRecompiled-*.AppImage
+          if-no-files-found: error
 
   build-linux-flatpak:
     needs: resolve_version
     if: ${{ contains(fromJSON(inputs.PLATFORMS), 'linux-flatpak') }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       GAME_VERSION: ${{ needs.resolve_version.outputs.game_version }}
       FLATPAK_ID: io.github.snowboardkidsrecomp.snowboardkidsrecomp
@@ -209,11 +210,11 @@ jobs:
     strategy:
       matrix:
         type: ${{ fromJSON(inputs.BUILD_TYPES) }}
-        os: [ubuntu-latest]
+        os: [ubuntu-24.04]
     name: ${{ matrix.os }} (x64, ${{ matrix.type }}, Flatpak)
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
           ref: ${{ github.event.pull_request.head.sha || github.ref }}
@@ -226,7 +227,7 @@ jobs:
           git submodule update --init --recursive
 
       - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2
+        uses: hendrikmuhs/ccache-action@v1.2.24
         with:
           key: ${{ matrix.os }}-sk1re-ccache-${{ matrix.type }}-x64-${{ inputs.N64RECOMP_COMMIT }}
 
@@ -236,7 +237,7 @@ jobs:
           sudo apt-get install -y flatpak-builder ccache lld
 
       - name: Checkout baserom
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: cdlewis/snowboardkids-private
           token: ${{ secrets.PRIVATE_REPO_ACCESS }}
@@ -267,7 +268,7 @@ jobs:
           flatpak build-bundle repo ./${{ env.FLATPAK_ID }}.flatpak ${{ env.FLATPAK_ID }} --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: SnowboardKidsRecompiled-Flatpak-X64-${{ matrix.type }}
           path: ./${{ env.FLATPAK_ID }}.flatpak
@@ -285,7 +286,7 @@ jobs:
     name: ubuntu-22.04 (arm64, ${{ matrix.type }}, Native, AppImage)
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
           ref: ${{ github.event.pull_request.head.sha || github.ref }}
@@ -298,7 +299,7 @@ jobs:
           git submodule update --init --recursive
 
       - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2
+        uses: hendrikmuhs/ccache-action@v1.2.24
         with:
           key: ${{ matrix.os }}-sk1re-ccache-${{ matrix.type }}-arm64-${{ inputs.N64RECOMP_COMMIT }}
 
@@ -319,7 +320,7 @@ jobs:
           echo ::endgroup::
 
       - name: Checkout baserom
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: cdlewis/snowboardkids-private
           token: ${{ secrets.PRIVATE_REPO_ACCESS }}
@@ -366,7 +367,7 @@ jobs:
           tar -czf SnowboardKidsRecompiled.tar.gz -C cmake-build SnowboardKidsRecompiled assets/ recompcontrollerdb.txt
 
       - name: Archive SnowboardKidsRecomp
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: SnowboardKidsRecompiled-${{ runner.os }}-ARM64-${{ matrix.type }}
           path: SnowboardKidsRecompiled.tar.gz
@@ -375,10 +376,11 @@ jobs:
         run: bash .github/linux/appimage.sh
 
       - name: SnowboardKidsRecomp AppImage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: SnowboardKidsRecompiled-AppImage-ARM64-${{ matrix.type }}
           path: SnowboardKidsRecompiled-*.AppImage
+          if-no-files-found: error
 
   build-windows:
     needs: resolve_version
@@ -392,7 +394,7 @@ jobs:
     name: windows (${{ matrix.type }})
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
           ref: ${{ github.event.pull_request.head.sha || github.ref }}
@@ -420,7 +422,7 @@ jobs:
         uses: ilammy/msvc-dev-cmd@v1
 
       - name: Checkout baserom
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: cdlewis/snowboardkids-private
           token: ${{ secrets.PRIVATE_REPO_ACCESS }}
@@ -498,7 +500,7 @@ jobs:
           Move-Item -Path "cmake-build/SnowboardKidsRecompiled.pdb" -Destination "SnowboardKidsRecompiled.pdb"
 
       - name: Archive SnowboardKidsRecomp
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: SnowboardKidsRecompiled-${{ runner.os }}-${{ matrix.type }}
           path: |
@@ -510,7 +512,7 @@ jobs:
             cmake-build/recompcontrollerdb.txt
 
       - name: Archive Debug Files
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: SnowboardKidsRecompiled-PDB-${{ matrix.type }}
           path: SnowboardKidsRecompiled.pdb
@@ -527,7 +529,7 @@ jobs:
     name: macos (x64, arm64, ${{ matrix.type }})
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
           ref: ${{ github.event.pull_request.head.sha || github.ref }}
@@ -540,7 +542,7 @@ jobs:
           git submodule update --init --recursive
 
       - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2
+        uses: hendrikmuhs/ccache-action@v1.2.24
         with:
           key: ${{ runner.os }}-sk1re-ccache-${{ matrix.type }}
 
@@ -561,7 +563,7 @@ jobs:
           parameters: .github/macos/macports.yaml
 
       - name: Checkout baserom
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: cdlewis/snowboardkids-private
           token: ${{ secrets.PRIVATE_REPO_ACCESS }}
@@ -611,7 +613,7 @@ jobs:
           zip -r -y SnowboardKidsRecompiled.zip SnowboardKidsRecompiled.app
 
       - name: Archive SnowboardKidsRecomp
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: SnowboardKidsRecompiled-${{ runner.os }}-${{ matrix.type }}
           path: SnowboardKidsRecompiled.zip
