@@ -174,7 +174,7 @@ std::string mod_game_id;
 
 constexpr const char* launcher_background_src = "?/sk1_launcher/background";
 constexpr const char* launcher_rock_src = "?/sk1_launcher/rock";
-constexpr const char* launcher_logo_src = "logo.svg";
+constexpr const char* launcher_logo_src = "?/sk1_launcher/logo";
 
 std::vector<char> read_asset_bytes(const char* asset_name) {
     std::filesystem::path path = recompui::file::get_asset_path(asset_name);
@@ -187,6 +187,12 @@ std::vector<char> read_asset_bytes(const char* asset_name) {
 }
 
 void queue_launcher_png_assets() {
+    std::vector<char> logo_bytes = read_asset_bytes("logo.png");
+    if (!logo_bytes.empty()) {
+        recompui::release_image(launcher_logo_src);
+        recompui::queue_image_from_bytes_file(launcher_logo_src, logo_bytes);
+    }
+
     std::vector<char> background_bytes = read_asset_bytes("launcher_background.png");
     if (!background_bytes.empty()) {
         int width = 0;
@@ -291,14 +297,12 @@ void on_launcher_init(recompui::LauncherMenu* menu) {
     background->set_translate_2D(0.0f, -50.0f, Unit::Percent);
     background->set_pointer_events(PointerEvents::None);
 
-    auto* logo = context.create_element<Svg>(menu, launcher_logo_src);
+    auto* logo = context.create_element<Image>(menu, launcher_logo_src);
     logo->set_position(Position::Absolute);
     logo->set_top(20.0f);
     logo->set_left(30.0f);
     logo->set_width(620.0f);
-    // Height follows the artwork's own aspect ratio, which the SVG reports as an
-    // intrinsic dimension. Pinning both axes would stretch it the next time the
-    // wordmark is redrawn at a different shape.
+    // Height follows the artwork's own aspect ratio to keep the wordmark's proportions.
     logo->set_height_auto();
     logo->set_pointer_events(PointerEvents::None);
 
