@@ -49,6 +49,7 @@
 #include "mods/snowboardkids_no_rubber_banding.h"
 #include "mods/snowboardkids_nepo_kids.h"
 #include "mods/snowboardkids_quickstart.h"
+#include "mods/snowboardkids_freecam.h"
 #include "sk1_game_version.h"
 #include "sk1_launcher.h"
 #ifdef _WIN32
@@ -849,6 +850,9 @@ int main(int argc, char** argv) {
     recomp::mods::register_embedded_mod(
         "snowboardkids_quickstart",
         { reinterpret_cast<const uint8_t*>(snowboardkids_quickstart), snowboardkids_quickstart_size });
+    recomp::mods::register_embedded_mod(
+        "snowboardkids_freecam",
+        { reinterpret_cast<const uint8_t*>(snowboardkids_freecam), snowboardkids_freecam_size });
 
     REGISTER_FUNC(recomp_get_target_aspect_ratio);
     REGISTER_FUNC(recomp_get_target_hud_aspect_ratio);
