@@ -1,0 +1,26 @@
+cmake_minimum_required(VERSION 3.20)
+
+# Can run without game assets or initialized submodules.
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    get_filename_component(SK1_REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../.." ABSOLUTE)
+    set(VCPKG_MANIFEST_DIR "${SK1_REPO_ROOT}" CACHE PATH "Dependency manifest directory")
+    project(WindowsCrashReportsTest LANGUAGES CXX)
+    if(NOT WIN32)
+        message(FATAL_ERROR "This crash-capture test requires Windows.")
+    endif()
+    set(CMAKE_CXX_STANDARD 20)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+    set(SK1_GAME_VERSION "0.0.0-test")
+    set(SK1_BUILD_ID "crash-report-test")
+    file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/generated")
+    configure_file("${SK1_REPO_ROOT}/cmake/sk1_game_version.h.in"
+        "${CMAKE_BINARY_DIR}/generated/sk1_game_version.h" @ONLY)
+    include("${SK1_REPO_ROOT}/cmake/WindowsCrashpad.cmake")
+    enable_testing()
+endif()
+
+add_executable(WindowsCrashReportsTest main.cpp)
+target_link_libraries(WindowsCrashReportsTest PRIVATE sk1_crash_reports crashpad::crashpad)
+sk1_stage_crashpad(WindowsCrashReportsTest)
+add_test(NAME WindowsCrashReports COMMAND WindowsCrashReportsTest)
+set_tests_properties(WindowsCrashReports PROPERTIES TIMEOUT 60)

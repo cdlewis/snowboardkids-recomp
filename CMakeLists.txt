@@ -78,6 +78,18 @@ if(NOT SK1_GAME_VERSION MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+([+-][0-9A-Za-z.-]+)?$
     )
 endif()
 
+set(SK1_BUILD_ID "unknown")
+find_package(Git QUIET)
+if(GIT_FOUND)
+    execute_process(COMMAND "${GIT_EXECUTABLE}" rev-parse HEAD
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        OUTPUT_VARIABLE SK1_BUILD_ID OUTPUT_STRIP_TRAILING_WHITESPACE
+        RESULT_VARIABLE SK1_BUILD_ID_RESULT)
+    if(NOT SK1_BUILD_ID_RESULT EQUAL 0)
+        set(SK1_BUILD_ID "unknown")
+    endif()
+endif()
+
 message(STATUS "Snowboard Kids game version: ${SK1_GAME_VERSION}")
 file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/generated")
 configure_file(
@@ -240,8 +252,18 @@ add_custom_command(OUTPUT
 # available below.
 add_subdirectory(${CMAKE_SOURCE_DIR}/lib/recomp-theme ${CMAKE_BINARY_DIR}/recomp-theme)
 
+if(WIN32)
+    include(cmake/WindowsCrashpad.cmake)
+endif()
+
 # Main executable
 add_executable(SnowboardKidsRecompiled)
+if(WIN32)
+    target_link_libraries(SnowboardKidsRecompiled PRIVATE sk1_crash_reports)
+    sk1_stage_crashpad(SnowboardKidsRecompiled)
+    enable_testing()
+    add_subdirectory(tests/windows-crash-reports EXCLUDE_FROM_ALL)
+endif()
 
 set (SOURCES
     ${CMAKE_SOURCE_DIR}/src/main/main.cpp

@@ -51,6 +51,9 @@
 #include "mods/snowboardkids_quickstart.h"
 #include "sk1_game_version.h"
 #include "sk1_launcher.h"
+#ifdef _WIN32
+#include "sk1_crash_reports.h"
+#endif
 #include "recomp_theme.h"
 
 #ifdef _WIN32
@@ -733,6 +736,17 @@ bool get_sk1_n64_input(int controller_num, uint16_t* buttons_out, float* x_out, 
 #define REGISTER_FUNC(name) recomp::overlays::register_base_export(#name, name)
 
 int main(int argc, char** argv) {
+    recompui::programconfig::set_program_name(std::string{ zelda64::program_name });
+    recompui::programconfig::set_program_id(std::u8string{ zelda64::program_id });
+#ifdef _WIN32
+    try {
+        sk1::crash_reports::initialize(recompui::file::get_app_folder_path(), version_string.c_str());
+        sk1::crash_reports::notify_previous_crash();
+    } catch (const std::exception& error) {
+        std::fprintf(stderr, "Crash reports disabled: %s\n", error.what());
+    }
+#endif
+
     (void) argc;
     (void) argv;
     recomp::Version project_version{};
@@ -795,9 +809,6 @@ int main(int argc, char** argv) {
     std::error_code ec;
     std::filesystem::current_path("/var/data", ec);
 #endif
-
-    recompui::programconfig::set_program_name(std::string{ zelda64::program_name });
-    recompui::programconfig::set_program_id(std::u8string{ zelda64::program_id });
 
     // Initialize SDL audio and set the output frequency.
     if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0) {

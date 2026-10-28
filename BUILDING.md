@@ -60,6 +60,28 @@ The other tool necessary will be `make`, which can be installed via [Chocolatey]
 choco install make
 ```
 
+Windows builds also require Crashpad through the pinned [vcpkg](https://github.com/microsoft/vcpkg) manifest.
+In PowerShell, create a local vcpkg checkout (the directory is ignored):
+
+```powershell
+git clone https://github.com/microsoft/vcpkg.git build-vcpkg
+git -C build-vcpkg checkout 866e9e258a76437074a5cf02d4c2d71b53bff2f8
+./build-vcpkg/bootstrap-vcpkg.bat -disableMetrics
+$env:VCPKG_ROOT = "$pwd/build-vcpkg"
+```
+
+Launch Visual Studio from that shell so `CMakeSettings.json` can resolve `VCPKG_ROOT`. For a command-line build,
+add these arguments to the CMake configure command:
+
+```powershell
+-DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-static-md
+```
+
+CMake installs the manifest dependencies automatically. Crashpad and zlib are linked statically with the dynamic
+MSVC runtime, matching the application. The build copies `crashpad_handler.exe` and its license notices beside the game;
+include both when distributing a Windows build. Linux and macOS builds do not use Crashpad.
+See [Windows crash reports](docs/windows-crash-reports.md) for reporting and validation instructions.
+
 ## 3. Build N64Recomp
 
 Build [N64: Recompiled](https://github.com/N64Recomp/N64Recomp) (targets `N64RecompCLI` and `RSPRecomp`) and copy the

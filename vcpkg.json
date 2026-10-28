@@ -1,0 +1,8 @@
+{
+  "name": "snowboardkids-recompiled",
+  "version-string": "0.0.0",
+  "builtin-baseline": "866e9e258a76437074a5cf02d4c2d71b53bff2f8",
+  "dependencies": [
+    { "name": "crashpad", "platform": "windows" }
+  ]
+}
