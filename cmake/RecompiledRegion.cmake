@@ -56,7 +56,7 @@ function(add_recompiled_region region)
             "${CMAKE_SOURCE_DIR}/lib/N64ModernRuntime/ultramodern/include"
             "${CMAKE_SOURCE_DIR}/lib/N64ModernRuntime/librecomp/include"
             "${CMAKE_SOURCE_DIR}/lib/N64ModernRuntime/N64Recomp/include")
-        if(NOT MSVC)
+        if(NOT MSVC OR CMAKE_C_COMPILER_ID STREQUAL "Clang")
             target_compile_options(${target} PRIVATE
                 -fno-strict-aliasing -Wno-unused-variable -Wno-implicit-function-declaration)
         endif()
