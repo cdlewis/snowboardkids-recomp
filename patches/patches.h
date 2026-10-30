@@ -1,5 +1,10 @@
 #pragma once
 
+#if defined(VERSION_JP)
+// JP uses the compact ASCII renderer directly; the Impl alias exists only in US.
+#define drawMenuAsciiCharImpl drawMenuAsciiChar
+#endif
+
 #define RECOMP_EXPORT __attribute__((section(".recomp_export")))
 #define RECOMP_PATCH __attribute__((section(".recomp_patch")))
 #define RECOMP_FORCE_PATCH __attribute__((section(".recomp_force_patch")))

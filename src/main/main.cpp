@@ -46,12 +46,18 @@
 #include "librecomp/helpers.hpp"
 
 #include "mods/snowboardkids_mod_template.h"
+#include "mods/snowboardkids_mod_template_jp.h"
 #include "mods/snowboardkids_no_rubber_banding.h"
+#include "mods/snowboardkids_no_rubber_banding_jp.h"
 #include "mods/snowboardkids_nepo_kids.h"
+#include "mods/snowboardkids_nepo_kids_jp.h"
 #include "mods/snowboardkids_quickstart.h"
+#include "mods/snowboardkids_quickstart_jp.h"
 #include "mods/snowboardkids_freecam.h"
+#include "mods/snowboardkids_freecam_jp.h"
 #include "sk1_game_version.h"
 #include "sk1_launcher.h"
+#include "game_regions.h"
 #ifdef _WIN32
 #include "sk1_crash_reports.h"
 #endif
@@ -463,6 +469,8 @@ RspUcodeFunc* get_rsp_microcode(const OSTask* task) {
 extern "C" void recomp_entrypoint(uint8_t* rdram, recomp_context* ctx);
 extern "C" void recomp_run_ui_callbacks(uint8_t* rdram, recomp_context* ctx);
 gpr get_entrypoint_address();
+extern "C" void jp_recomp_entrypoint(uint8_t* rdram, recomp_context* ctx);
+gpr jp_get_entrypoint_address();
 
 // array of supported GameEntry objects
 std::vector<recomp::GameEntry> supported_games = {
@@ -478,6 +486,18 @@ std::vector<recomp::GameEntry> supported_games = {
         .has_compressed_code = false,
         .entrypoint_address = get_entrypoint_address(),
         .entrypoint = recomp_entrypoint,
+    },
+    {
+        .rom_hash = 0x0de031bdfd177689ULL,
+        .internal_name = "\xBD\xC9\xCE\xDE\xB7\xAF\xBD\xDE",
+        .display_name = "Snowboard Kids (Japan)",
+        .game_id = u8"snowboardkids.n64.jp",
+        .mod_game_id = "snowboardkids.jp",
+        .save_type = recomp::SaveType::Sram,
+        .is_enabled = true,
+        .has_compressed_code = false,
+        .entrypoint_address = jp_get_entrypoint_address(),
+        .entrypoint = jp_recomp_entrypoint,
     },
 };
 
@@ -737,6 +757,7 @@ bool get_sk1_n64_input(int controller_num, uint16_t* buttons_out, float* x_out, 
 #define REGISTER_FUNC(name) recomp::overlays::register_base_export(#name, name)
 
 int main(int argc, char** argv) {
+    sk1::initialize_game_restart(argc, argv);
     recompui::programconfig::set_program_name(std::string{ zelda64::program_name });
     recompui::programconfig::set_program_id(std::u8string{ zelda64::program_id });
 #ifdef _WIN32
@@ -854,6 +875,22 @@ int main(int argc, char** argv) {
         "snowboardkids_freecam",
         { reinterpret_cast<const uint8_t*>(snowboardkids_freecam), snowboardkids_freecam_size });
 
+    recomp::mods::register_embedded_mod(
+        "snowboardkids_mod_template_jp",
+        { reinterpret_cast<const uint8_t*>(snowboardkids_mod_template_jp), snowboardkids_mod_template_jp_size });
+    recomp::mods::register_embedded_mod(
+        "snowboardkids_no_rubber_banding_jp",
+        { reinterpret_cast<const uint8_t*>(snowboardkids_no_rubber_banding_jp), snowboardkids_no_rubber_banding_jp_size });
+    recomp::mods::register_embedded_mod(
+        "snowboardkids_nepo_kids_jp",
+        { reinterpret_cast<const uint8_t*>(snowboardkids_nepo_kids_jp), snowboardkids_nepo_kids_jp_size });
+    recomp::mods::register_embedded_mod(
+        "snowboardkids_quickstart_jp",
+        { reinterpret_cast<const uint8_t*>(snowboardkids_quickstart_jp), snowboardkids_quickstart_jp_size });
+    recomp::mods::register_embedded_mod(
+        "snowboardkids_freecam_jp",
+        { reinterpret_cast<const uint8_t*>(snowboardkids_freecam_jp), snowboardkids_freecam_jp_size });
+
     REGISTER_FUNC(recomp_get_target_aspect_ratio);
     REGISTER_FUNC(recomp_get_target_hud_aspect_ratio);
     REGISTER_FUNC(recomp_get_target_framerate);
@@ -871,13 +908,11 @@ int main(int argc, char** argv) {
     recompui::register_ui_exports();
     recomputil::register_data_api_exports();
 
-    zelda64::register_overlays();
-    zelda64::register_patches();
     zelda64::init_config();
     // Test overrides must run after the persisted graphics configuration is loaded or init_config replaces them.
     apply_test_hud_ratio_override();
 
-    sk1::launcher::register_callbacks(supported_games[0]);
+    sk1::launcher::register_callbacks(supported_games);
 
     recomp::rsp::callbacks_t rsp_callbacks{
         .get_rsp_microcode = get_rsp_microcode,

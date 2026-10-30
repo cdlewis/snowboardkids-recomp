@@ -3,7 +3,7 @@
 # It needs:
 #
 #   - a private repo `cdlewis/snowboardkids-private` (read via PRIVATE_REPO_ACCESS)
-#     containing `snowboardkids.z64.gpg`
+#     containing `snowboardkids.z64.gpg` and `snowboardkids.jp.z64.gpg`
 #   - BASEROM_KEY, the passphrase for it
 #
 # The symbol dumps come from the snowboardkids-recomp-syms submodule, so the
@@ -145,12 +145,13 @@ jobs:
       - name: Decrypt baserom
         run: |
           gpg --quiet --batch --yes --decrypt --passphrase "$BASEROM_KEY" --output snowboardkids.z64 snowboardkids.z64.gpg
+          gpg --quiet --batch --yes --decrypt --passphrase "$BASEROM_KEY" --output snowboardkids.jp.z64 snowboardkids.jp.z64.gpg
         env:
           BASEROM_KEY: ${{ secrets.BASEROM_KEY }}
         working-directory: baserom
 
       - name: Prepare Build
-        run: cp baserom/snowboardkids.z64 ./
+        run: cp baserom/snowboardkids.z64 baserom/snowboardkids.jp.z64 ./
 
       - name: Build N64Recomp and RSPRecomp
         run: |
@@ -169,8 +170,7 @@ jobs:
 
       - name: Run N64Recomp and RSPRecomp
         run: |
-          ./N64Recomp us.toml
-          ./RSPRecomp aspMain.us.toml
+          python3 scripts/generate-code.py
 
       - name: Build SnowboardKidsRecomp
         run: |
@@ -246,12 +246,13 @@ jobs:
       - name: Decrypt baserom
         run: |
           gpg --quiet --batch --yes --decrypt --passphrase "$BASEROM_KEY" --output snowboardkids.z64 snowboardkids.z64.gpg
+          gpg --quiet --batch --yes --decrypt --passphrase "$BASEROM_KEY" --output snowboardkids.jp.z64 snowboardkids.jp.z64.gpg
         env:
           BASEROM_KEY: ${{ secrets.BASEROM_KEY }}
         working-directory: baserom
 
       - name: Prepare Build
-        run: cp baserom/snowboardkids.z64 ./
+        run: cp baserom/snowboardkids.z64 baserom/snowboardkids.jp.z64 ./
 
       - name: Prepare Flatpak
         run: |
@@ -329,12 +330,13 @@ jobs:
       - name: Decrypt baserom
         run: |
           gpg --quiet --batch --yes --decrypt --passphrase "$BASEROM_KEY" --output snowboardkids.z64 snowboardkids.z64.gpg
+          gpg --quiet --batch --yes --decrypt --passphrase "$BASEROM_KEY" --output snowboardkids.jp.z64 snowboardkids.jp.z64.gpg
         env:
           BASEROM_KEY: ${{ secrets.BASEROM_KEY }}
         working-directory: baserom
 
       - name: Prepare Build
-        run: cp baserom/snowboardkids.z64 ./
+        run: cp baserom/snowboardkids.z64 baserom/snowboardkids.jp.z64 ./
 
       - name: Build N64Recomp and RSPRecomp
         run: |
@@ -353,8 +355,7 @@ jobs:
 
       - name: Run N64Recomp and RSPRecomp
         run: |
-          ./N64Recomp us.toml
-          ./RSPRecomp aspMain.us.toml
+          python3 scripts/generate-code.py
 
       - name: Build SnowboardKidsRecomp
         run: |
@@ -439,13 +440,18 @@ jobs:
           path: baserom
 
       - name: Decrypt baserom
-        run: gpg --quiet --batch --yes --decrypt --passphrase "$env:BASEROM_KEY" --output snowboardkids.z64 snowboardkids.z64.gpg
+        run: |
+          gpg --quiet --batch --yes --decrypt --passphrase "$env:BASEROM_KEY" --output snowboardkids.z64 snowboardkids.z64.gpg
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          gpg --quiet --batch --yes --decrypt --passphrase "$env:BASEROM_KEY" --output snowboardkids.jp.z64 snowboardkids.jp.z64.gpg
         env:
           BASEROM_KEY: ${{ secrets.BASEROM_KEY }}
         working-directory: baserom
 
       - name: Prepare Build
-        run: Copy-Item -Path ".\baserom\snowboardkids.z64" -Destination ".\snowboardkids.z64"
+        run: |
+          Copy-Item -Path ".\baserom\snowboardkids.z64" -Destination ".\snowboardkids.z64"
+          Copy-Item -Path ".\baserom\snowboardkids.jp.z64" -Destination ".\snowboardkids.jp.z64"
 
       - name: Build N64Recomp and RSPRecomp
         run: |
@@ -466,8 +472,7 @@ jobs:
 
       - name: Run N64Recomp and RSPRecomp
         run: |
-          ./N64Recomp.exe us.toml
-          ./RSPRecomp.exe aspMain.us.toml
+          python scripts/generate-code.py
 
       - name: Run patch recompiler
         run: |
@@ -584,12 +589,13 @@ jobs:
       - name: Decrypt baserom
         run: |
           gpg --quiet --batch --yes --decrypt --passphrase "$BASEROM_KEY" --output snowboardkids.z64 snowboardkids.z64.gpg
+          gpg --quiet --batch --yes --decrypt --passphrase "$BASEROM_KEY" --output snowboardkids.jp.z64 snowboardkids.jp.z64.gpg
         env:
           BASEROM_KEY: ${{ secrets.BASEROM_KEY }}
         working-directory: baserom
 
       - name: Prepare Build
-        run: cp baserom/snowboardkids.z64 ./
+        run: cp baserom/snowboardkids.z64 baserom/snowboardkids.jp.z64 ./
 
       - name: Build N64Recomp and RSPRecomp
         run: |
@@ -608,8 +614,7 @@ jobs:
 
       - name: Run N64Recomp and RSPRecomp
         run: |
-          ./N64Recomp us.toml
-          ./RSPRecomp aspMain.us.toml
+          python3 scripts/generate-code.py
 
       - name: Build SnowboardKidsRecomp
         run: |

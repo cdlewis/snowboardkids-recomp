@@ -41,7 +41,7 @@ If you have issues with crashes on startup, make sure your graphics drivers are 
 
 #### Plug and Play
 
-Simply provide your copy of the North American version of the game in the main menu and start playing! This project will automatically load assets from the provided copy, so there is no need to go through a separate extraction step or build the game yourself. Other versions of the game may be supported in the future.
+Simply provide your copy of the North American or Japanese version of the game in the main menu and start playing! This project will automatically load assets from the provided copy, so there is no need to go through a separate extraction step or build the game yourself. Other versions of the game may be supported in the future.
 
 #### Fully Intact N64 Effects
 
@@ -108,9 +108,7 @@ Unlike N64 ports in the past, this project is not based on the source code provi
 
 #### How do I choose a different ROM?
 
-**You don't.** This project is **only** a port of Snowboard Kids, and it will only accept one specific ROM: the US version of the N64 release of Snowboard Kids. ROMs in formats other than .z64 will be automatically converted, as long as it is the correct ROM. **It is not an emulator and it cannot run any arbitrary ROM.**
-
-Instead, you can change the game by installing mods. See the [mod support](#mod-support) section for details.
+This project accepts the US and Japanese versions of the N64 release of Snowboard Kids. ROMs in formats other than .z64 will be automatically converted, as long as it is the correct ROM. **It is not an emulator and it cannot run any arbitrary ROM.**
 
 #### Can you run this project as a portable application?
 

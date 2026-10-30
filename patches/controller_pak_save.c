@@ -34,7 +34,11 @@ s32 recomp_save_write(u32 offset, const void* src, u32 size);
 #define PAK_MAX_NOTES 16
 #define PAK_TOTAL_PAGES 123
 #define PAK_PAGE_SIZE 256
+#if defined(VERSION_JP)
+#define SAVE_GAME_CODE 0x4E534B4A
+#else
 #define SAVE_GAME_CODE 0x4E534B45
+#endif
 #define SAVE_COMPANY_CODE 0x4542
 
 typedef char SavedNoteStateSizeCheck[(sizeof(SavedNoteState) == 0x20) ? 1 : -1];
@@ -146,7 +150,7 @@ RECOMP_PATCH void checkControllerPakSaveStatus(u16 arg0) {
     s32 i;
 
     gControllerPakSaveFileIdentity.size = CONTROLLER_PAK_SAVE_NOTE_SIZE;
-    gControllerPakSaveFileIdentity.gameCode = 'NSKE';
+    gControllerPakSaveFileIdentity.gameCode = SAVE_GAME_CODE;
     gControllerPakSaveFileIdentity.companyCode = 'EB';
 
     i = 0;
@@ -198,7 +202,7 @@ RECOMP_PATCH void readControllerPakSave(u16 controllerIndex) {
 
     checksumFailed = 0;
 
-    gControllerPakSaveFileIdentity.gameCode = 'NSKE';
+    gControllerPakSaveFileIdentity.gameCode = SAVE_GAME_CODE;
     gControllerPakSaveFileIdentity.companyCode = 'EB';
 
     offset = 0;
@@ -261,7 +265,7 @@ RECOMP_PATCH void writeControllerPakSave(u16 controllerIndex) {
     s32 checksum;
 
     gControllerPakSaveFileIdentity.size = CONTROLLER_PAK_SAVE_NOTE_SIZE;
-    gControllerPakSaveFileIdentity.gameCode = 'NSKE';
+    gControllerPakSaveFileIdentity.gameCode = SAVE_GAME_CODE;
     gControllerPakSaveFileIdentity.companyCode = 'EB';
 
     i = 0;

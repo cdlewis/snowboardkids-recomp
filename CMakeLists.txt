@@ -144,52 +144,6 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/lib/N64ModernRuntime)
 
 target_include_directories(rt64 PRIVATE ${CMAKE_BINARY_DIR}/rt64/src)
 
-# RecompiledFuncs - Library containing the primary recompiler output
-add_library(RecompiledFuncs STATIC)
-
-target_compile_options(RecompiledFuncs PRIVATE
-    # -Wno-unused-but-set-variable
-    -fno-strict-aliasing
-    -Wno-unused-variable
-    -Wno-implicit-function-declaration
-)
-
-target_include_directories(RecompiledFuncs PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/lib/N64ModernRuntime/ultramodern/include
-    ${CMAKE_SOURCE_DIR}/lib/N64ModernRuntime/librecomp/include
-    ${CMAKE_SOURCE_DIR}/lib/N64ModernRuntime/N64Recomp/include
-)
-
-file(GLOB FUNC_C_SOURCES ${CMAKE_SOURCE_DIR}/RecompiledFuncs/*.c)
-file(GLOB FUNC_CXX_SOURCES ${CMAKE_SOURCE_DIR}/RecompiledFuncs/*.cpp)
-
-target_sources(RecompiledFuncs PRIVATE ${FUNC_C_SOURCES} ${FUNC_CXX_SOURCES})
-
-# PatchesLib - Library containing the recompiled output for any custom function patches
-add_library(PatchesLib STATIC)
-
-target_compile_options(PatchesLib PRIVATE
-    # -Wno-unused-but-set-variable
-    -fno-strict-aliasing
-    -Wno-unused-variable
-    -Wno-implicit-function-declaration
-)
-
-target_include_directories(PatchesLib PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/lib/N64ModernRuntime/ultramodern/include
-    ${CMAKE_SOURCE_DIR}/lib/N64ModernRuntime/librecomp/include
-    ${CMAKE_SOURCE_DIR}/lib/N64ModernRuntime/N64Recomp/include
-)
-
-target_sources(PatchesLib PRIVATE
-    ${CMAKE_SOURCE_DIR}/RecompiledPatches/patches.c
-    ${CMAKE_SOURCE_DIR}/RecompiledPatches/patches_bin.c
-)
-
-set_source_files_properties(${CMAKE_SOURCE_DIR}/RecompiledPatches/patches.c PROPERTIES COMPILE_FLAGS -fno-strict-aliasing)
-
 # Build patches elf
 if(NOT DEFINED PATCHES_C_COMPILER)
     if(APPLE AND EXISTS "/opt/homebrew/opt/llvm/bin/clang")
@@ -217,35 +171,10 @@ else()
     set(PATCH_RECOMP_ATTEMPTS 1)
 endif()
 
-add_custom_target(PatchesBin
-    COMMAND ${CMAKE_COMMAND} -E env CC=${PATCHES_C_COMPILER} LD=${PATCHES_LD} make
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/patches
-    BYPRODUCTS ${CMAKE_SOURCE_DIR}/patches/patches.elf
-)
-
-# Generate patches_bin.c from patches.bin
-add_custom_command(OUTPUT ${CMAKE_SOURCE_DIR}/RecompiledPatches/patches_bin.c
-    COMMAND file_to_c ${CMAKE_SOURCE_DIR}/patches/patches.bin mm_patches_bin ${CMAKE_SOURCE_DIR}/RecompiledPatches/patches_bin.c ${CMAKE_SOURCE_DIR}/RecompiledPatches/patches_bin.h
-    DEPENDS ${CMAKE_SOURCE_DIR}/patches/patches.bin
-)
-
-# Recompile patches elf into patches.c and patches.bin
-add_custom_command(OUTPUT
-                       ${CMAKE_SOURCE_DIR}/patches/patches.bin
-                       ${CMAKE_SOURCE_DIR}/RecompiledPatches/patches.c
-                       ${CMAKE_SOURCE_DIR}/RecompiledPatches/recomp_overlays.inl
-                       ${CMAKE_SOURCE_DIR}/RecompiledPatches/funcs.h
-                   # TODO: Look into why modifying patches requires two builds to take
-                   COMMAND ${CMAKE_COMMAND}
-                           -DRUN_EXECUTABLE=./N64Recomp
-                           -DRUN_ARGUMENTS=patches.toml
-                           -DRUN_ATTEMPTS=${PATCH_RECOMP_ATTEMPTS}
-                           -DRUN_DELAY_SECONDS=2
-                           -DRUN_WORKING_DIRECTORY=${CMAKE_SOURCE_DIR}
-                           -P ${CMAKE_SOURCE_DIR}/cmake/RunWithRetries.cmake
-                   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-                   DEPENDS ${CMAKE_SOURCE_DIR}/patches/patches.elf
-)
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+include(cmake/RecompiledRegion.cmake)
+add_recompiled_region(us)
+add_recompiled_region(jp)
 
 # Launcher and config-menu theming shared with snowboardkids2-recomp. Added
 # before the game target so its source, include and asset variables are
@@ -268,10 +197,13 @@ endif()
 set (SOURCES
     ${CMAKE_SOURCE_DIR}/src/main/main.cpp
     ${CMAKE_SOURCE_DIR}/src/main/sk1_launcher.cpp
+    ${CMAKE_SOURCE_DIR}/src/main/game_regions.cpp
     ${SNOWBOARDKIDS_THEME_SOURCES}
     ${CMAKE_SOURCE_DIR}/src/main/support.cpp
     ${CMAKE_SOURCE_DIR}/src/main/register_overlays.cpp
     ${CMAKE_SOURCE_DIR}/src/main/register_patches.cpp
+    ${CMAKE_SOURCE_DIR}/src/main/register_overlays_jp.cpp
+    ${CMAKE_SOURCE_DIR}/src/main/register_patches_jp.cpp
 
     ${CMAKE_SOURCE_DIR}/src/game/config.cpp
     ${CMAKE_SOURCE_DIR}/src/game/quicksaving.cpp
@@ -481,7 +413,11 @@ target_include_directories(recompinput BEFORE PRIVATE
     ${CMAKE_SOURCE_DIR}/lib/N64ModernRuntime/thirdparty
 )
 
+add_dependencies(SnowboardKidsRecompiled JpSymbols)
+
 target_link_libraries(SnowboardKidsRecompiled PRIVATE
+    PatchesLibJP
+    RecompiledFuncsJP
     PatchesLib
     RecompiledFuncs
     recompui
@@ -493,7 +429,7 @@ target_link_libraries(SnowboardKidsRecompiled PRIVATE
 )
 
 # Embed all .nrm files in the "mods" directory
-file(GLOB NRM_FILES "${CMAKE_SOURCE_DIR}/mods/*.nrm")
+file(GLOB NRM_FILES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/mods/*.nrm")
 
 set(GENERATED_NRM_SOURCES "")
 set(GENERATED_NRM_HEADERS "")

@@ -3,9 +3,7 @@
 This guide will help you build the project on your local machine. You will need to provide:
 
 - A copy of the North American N64 release of Snowboard Kids as `snowboardkids.z64` in the repository root.
-- A build of the [Snowboard Kids decompilation](https://github.com/cdlewis/snowboardkids-decomp) as `snowboardkids.elf`
-  in the repository root. The recompiler reads the game's symbols from this ELF; the actual code it translates comes
-  from the ROM.
+- A copy of the Japanese N64 release of Snowboard Kids as `snowboardkids.jp.z64` in the repository root.
 
 Neither file is distributed with this repository.
 
@@ -93,19 +91,19 @@ recompiler behaviour.
 
 ## 4. Symbol Dumps
 
-The recompiler reads `snowboardkids-recomp-syms/dump.toml` and `snowboardkids-recomp-syms/data_dump.toml`. They are
+The recompiler reads `snowboardkids-recomp-syms/dump.toml` and `snowboardkids-recomp-syms/data_dump.toml` for the US
+version, and the equivalent files in `snowboardkids-recomp-syms/jp/` for the Japanese version. They are
 checked into the `snowboardkids-recomp-syms` submodule, so a recursive checkout already has them and there is nothing to
 generate. Updating them for a new decompilation build is a commit in that submodule plus a gitlink bump here.
 
 ## 5. Generate the C Code
 
 ```bash
-./N64Recomp us.toml
-./RSPRecomp aspMain.us.toml
+python3 scripts/generate-code.py
 ```
 
-These produce `RecompiledFuncs/` and `rsp/aspMain.cpp` respectively. The patch recompiler (`patches.toml`) is run
-automatically as part of the CMake build.
+This produces `RecompiledFuncs/`, `RecompiledFuncsJP/`, and `rsp/aspMain.cpp`. The patch recompilers (`patches.toml`
+and `patches.jp.toml`) are run automatically as part of the CMake build.
 
 ## 6. Build the Project
 

@@ -938,6 +938,7 @@ RECOMP_PATCH void drawAssetTableSpriteWithExplicitPalette(s16 x, s16 y, AssetTab
     );
 }
 
+#if defined(VERSION_US)
 RECOMP_PATCH void drawMenuAsciiCharImpl(s16 x, s16 y, u8 ch, u16 arg3) {
     char pad[8];
     u32 tile;
@@ -1008,6 +1009,8 @@ RECOMP_PATCH void drawMenuAsciiCharImpl(s16 x, s16 y, u8 ch, u16 arg3) {
         }
     }
 }
+
+#endif
 
 RECOMP_PATCH void drawMenuSpriteWithAlphaClipped(
     s16 x,

@@ -1,4 +1,5 @@
 #include "sk1_launcher.h"
+#include "game_regions.h"
 
 #include <filesystem>
 #include <fstream>
@@ -26,6 +27,7 @@ namespace {
 
 class Sk1LauncherOption;
 Sk1LauncherOption* start_option = nullptr;
+Sk1LauncherOption* change_rom_option = nullptr;
 
 class Sk1LauncherOption : public recompui::Element {
   public:
@@ -172,6 +174,25 @@ bool initial_focus_pending = false;
 std::u8string game_id;
 std::string mod_game_id;
 
+std::vector<recomp::GameEntry> games;
+size_t selected_game = 0;
+
+void select_game(size_t index) {
+    selected_game = index;
+    game_id = games[index].game_id;
+    mod_game_id = games[index].mod_game_id;
+    rom_valid = recomp::is_rom_valid(game_id);
+    recompui::update_game_mod_id(mod_game_id);
+    std::ofstream preference{recomp::get_config_path() / "game_region.txt"};
+    preference << reinterpret_cast<const char*>(game_id.c_str());
+    if (start_option != nullptr) {
+        start_option->set_title(rom_valid ? "Start game" : "Select ROM");
+    }
+    if (change_rom_option != nullptr) {
+        change_rom_option->set_display(rom_valid ? recompui::Display::Flex : recompui::Display::None);
+    }
+}
+
 constexpr const char* launcher_background_src = "?/sk1_launcher/background";
 constexpr const char* launcher_rock_src = "?/sk1_launcher/rock";
 constexpr const char* launcher_logo_src = "?/sk1_launcher/logo";
@@ -226,20 +247,25 @@ void open_config_tab(std::string_view tab_id) {
     recompui::config::open();
 }
 
-void start_or_select_rom() {
-    if (rom_valid) {
-        recompui::update_game_mod_id(mod_game_id);
-        recomp::start_game(game_id, {});
-        recompui::hide_all_contexts();
-        return;
-    }
-
+void choose_rom() {
     recompui::file::open_file_dialog([](bool success, const std::filesystem::path& path) {
         if (!success) {
             return;
         }
 
-        recomp::RomValidationError rom_error = recomp::select_rom(path, game_id);
+        std::u8string detected_id;
+        recomp::RomValidationError rom_error = sk1::import_rom(path, games, detected_id);
+        if (rom_error == recomp::RomValidationError::Good) {
+            for (size_t index = 0; index < games.size(); ++index) {
+                if (games[index].game_id == detected_id) {
+                    recompui::ContextId context = recompui::get_launcher_context_id();
+                    bool opened = context.open_if_not_already();
+                    select_game(index);
+                    if (opened) context.close();
+                    break;
+                }
+            }
+        }
         switch (rom_error) {
             case recomp::RomValidationError::Good:
                 rom_valid = true;
@@ -266,7 +292,7 @@ void start_or_select_rom() {
                 break;
             case recomp::RomValidationError::IncorrectVersion:
                 recompui::message_box("This ROM is the correct game, but the wrong version.\n"
-                                      "This project requires the NTSC-U N64 version of the game.");
+                                      "This project supports the original USA and Japan N64 releases.");
                 break;
             case recomp::RomValidationError::OtherError:
                 recompui::message_box("An unknown error has occurred.");
@@ -275,11 +301,42 @@ void start_or_select_rom() {
     });
 }
 
+void start_or_select_rom() {
+    if (!rom_valid) {
+        choose_rom();
+        return;
+    }
+    recompui::update_game_mod_id(mod_game_id);
+    if (sk1::start_game(game_id)) {
+        recompui::hide_all_contexts();
+    } else {
+        recompui::message_box("Could not restart the application. Close it and reopen it to use the selected ROM.");
+    }
+}
+
 void on_launcher_init(recompui::LauncherMenu* menu) {
     using namespace recompui;
 
-    rom_valid = recomp::is_rom_valid(game_id);
     start_option = nullptr;
+    change_rom_option = nullptr;
+    // Stored ROMs have been validated by the runtime by the time the launcher opens.
+    std::ifstream preference{recomp::get_config_path() / "game_region.txt"};
+    std::string saved_id;
+    preference >> saved_id;
+    size_t index_to_select = 0;
+    bool found_stored_rom = false;
+    for (size_t index = 0; index < games.size(); ++index) {
+        if (!recomp::is_rom_valid(games[index].game_id)) continue;
+        if (!found_stored_rom) {
+            index_to_select = index;
+            found_stored_rom = true;
+        }
+        if (saved_id == reinterpret_cast<const char*>(games[index].game_id.c_str())) {
+            index_to_select = index;
+            break;
+        }
+    }
+    select_game(index_to_select);
 
     auto context = get_current_context();
     queue_launcher_png_assets();
@@ -353,6 +410,8 @@ void on_launcher_init(recompui::LauncherMenu* menu) {
 
     start_option = context.create_element<Sk1LauncherOption>(menu_container, rom_valid ? "Start game" : "Select ROM",
                                                              start_or_select_rom, true);
+    change_rom_option = context.create_element<Sk1LauncherOption>(menu_container, "Change ROM", choose_rom, false);
+    change_rom_option->set_display(rom_valid ? Display::Flex : Display::None);
     context.set_autofocus_element(start_option);
     initial_focus_pending = true;
 
@@ -370,15 +429,25 @@ void on_launcher_update(recompui::LauncherMenu*) {
         start_option->focus();
         initial_focus_pending = false;
     }
+    if (auto requested = sk1::take_restart_game()) {
+        for (size_t index = 0; index < games.size(); ++index) {
+            if (games[index].game_id == *requested && recomp::is_rom_valid(games[index].game_id)) {
+                select_game(index);
+                start_or_select_rom();
+                break;
+            }
+        }
+    }
 }
 
 } // namespace
 
 namespace sk1::launcher {
 
-void register_callbacks(const recomp::GameEntry& game) {
-    game_id = game.game_id;
-    mod_game_id = game.mod_game_id;
+void register_callbacks(std::span<const recomp::GameEntry> supported) {
+    games.assign(supported.begin(), supported.end());
+    game_id = games[selected_game].game_id;
+    mod_game_id = games[selected_game].mod_game_id;
 
     recompui::register_launcher_init_callback(on_launcher_init);
     recompui::register_launcher_update_callback(on_launcher_update);

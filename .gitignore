@@ -11,6 +11,8 @@
 # Output C files
 RecompiledFuncs/
 RecompiledPatches/
+RecompiledFuncsJP/
+RecompiledPatchesJP/
 rsp/aspMain.cpp
 
 # Mac / Linux build output

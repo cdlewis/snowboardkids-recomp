@@ -33,6 +33,7 @@ require_file() {
     fi
 }
 
+require_tool python3
 require_tool cmake
 require_tool ninja
 require_tool make
@@ -41,14 +42,21 @@ require_tool "$CXX_COMPILER"
 require_tool "$PATCHES_C_COMPILER"
 require_tool "$PATCHES_LD"
 require_file "$ROOT_DIR/N64Recomp"
+require_file "$ROOT_DIR/RSPRecomp"
+require_file "$ROOT_DIR/snowboardkids.z64"
+require_file "$ROOT_DIR/snowboardkids.jp.z64"
 
 echo "==> Cleaning CMake build directory: $BUILD_PATH"
 rm -rf "$BUILD_PATH"
 mkdir -p "$BUILD_PATH/clang-module-cache"
 export CLANG_MODULE_CACHE_PATH="$BUILD_PATH/clang-module-cache"
 
+echo "==> Generating regional game code"
+python3 "$ROOT_DIR/scripts/generate-code.py"
+
 echo "==> Cleaning patches"
 make -C "$ROOT_DIR/patches" clean
+make -C "$ROOT_DIR/patches" VERSION=jp clean
 rm -f "$ROOT_DIR/patches/patches.bin" "$ROOT_DIR/patches/patches.map"
 
 echo "==> Building patches"
