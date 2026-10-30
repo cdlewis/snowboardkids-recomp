@@ -65,11 +65,11 @@ RECOMP_PATCH void drawTwoPlayerRaceHud(void *arg0) {
     }
 
     // @recomp Use the game formatter wrapper because patch calls to sprintf do not resolve.
-    _Sprintf(buffer, gRaceHudTwoPlayerScoreFormat, gRacePlayers[gCurrentViewportIndex].score);
+    _Sprintf(buffer, gRaceHudTwoPlayerScoreFormat, gRacePlayers[gCurrentViewportIndex].state.score);
     // @recomp Keep the five score digits immediately left of the coin at the vertical right inset.
     x = vertical ? 16 : 0x50;
     ptr = buffer;
-    if (gRacePlayers[gCurrentViewportIndex].score < 0x64) {
+    if (gRacePlayers[gCurrentViewportIndex].state.score < 0x64) {
         color = 0x10;
     } else {
         color = 0xE;
@@ -98,16 +98,16 @@ RECOMP_PATCH void drawTwoPlayerRaceHud(void *arg0) {
         (gRaceHudCoinSpinnerFrame >> 1) + 4
     );
 
-    if (gRacePlayers[gCurrentViewportIndex].itemEffectPalette != 0) {
+    if (gRacePlayers[gCurrentViewportIndex].state.shotPalette != 0) {
         drawScaledAssetTableSprite(
             // @recomp Place the first item box beside the second at the vertical right HUD edge.
             vertical ? 8 : -0x88,
             // @recomp Place the vertical item box eight pixels below the viewport top.
             vertical ? -112 : -0x30,
             getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
-            gRaceHudItemEffectTileOffsets[gRacePlayers[gCurrentViewportIndex].itemEffectType] +
-                gRacePlayers[gCurrentViewportIndex].itemEffectCount - 1,
-            gRacePlayers[gCurrentViewportIndex].itemEffectPalette
+            gRaceHudShotTileOffsets[gRacePlayers[gCurrentViewportIndex].state.shotType] +
+                gRacePlayers[gCurrentViewportIndex].state.shotCount - 1,
+            gRacePlayers[gCurrentViewportIndex].state.shotPalette
         );
     } else {
         drawAssetTableSprite(
@@ -116,20 +116,20 @@ RECOMP_PATCH void drawTwoPlayerRaceHud(void *arg0) {
             // @recomp Place the vertical item box eight pixels below the viewport top.
             vertical ? -112 : -0x30,
             getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
-            gRaceHudItemEffectTileOffsets[gRacePlayers[gCurrentViewportIndex].itemEffectType] +
-                gRacePlayers[gCurrentViewportIndex].itemEffectCount - 1
+            gRaceHudShotTileOffsets[gRacePlayers[gCurrentViewportIndex].state.shotType] +
+                gRacePlayers[gCurrentViewportIndex].state.shotCount - 1
         );
     }
 
-    if (gRacePlayers[gCurrentViewportIndex].actionEffectPalette != 0) {
+    if (gRacePlayers[gCurrentViewportIndex].state.itemPalette != 0) {
         drawScaledAssetTableSprite(
             // @recomp Keep the second 32-pixel item box eight pixels inside the vertical right HUD edge.
             vertical ? 40 : -0x68,
             // @recomp Place the vertical item box eight pixels below the viewport top.
             vertical ? -112 : -0x30,
             getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
-            gRaceHudActionEffectTileIds[gRacePlayers[gCurrentViewportIndex].actionEffectType],
-            gRacePlayers[gCurrentViewportIndex].actionEffectPalette
+            gRaceHudItemTileIds[gRacePlayers[gCurrentViewportIndex].state.itemType],
+            gRacePlayers[gCurrentViewportIndex].state.itemPalette
         );
     } else {
         drawAssetTableSprite(
@@ -138,7 +138,7 @@ RECOMP_PATCH void drawTwoPlayerRaceHud(void *arg0) {
             // @recomp Place the vertical item box eight pixels below the viewport top.
             vertical ? -112 : -0x30,
             getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
-            gRaceHudActionEffectTileIds[gRacePlayers[gCurrentViewportIndex].actionEffectType]
+            gRaceHudItemTileIds[gRacePlayers[gCurrentViewportIndex].state.itemType]
         );
     }
 
@@ -153,7 +153,7 @@ RECOMP_PATCH void drawTwoPlayerRaceHud(void *arg0) {
         // @recomp Keep the 32-pixel vertical rank sprite eight pixels above the viewport bottom.
         vertical ? 80 : 0x12,
         getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE),
-        gRacePlayers[gCurrentViewportIndex].rankIndex
+        gRacePlayers[gCurrentViewportIndex].state.rankIndex
     );
 
     if (gCurrentViewportIndex == 0) {
@@ -197,7 +197,7 @@ RECOMP_PATCH void drawTwoPlayerLapCounter(void *arg0) {
         anchorVerticalHudGroup(-1);
     }
     // @recomp Position the vertical current lap digit and use the exported implementation of the weak ASCII alias.
-    drawMenuAsciiCharImpl(vertical ? -48 : 0x70, (s16)y, gRacePlayers[viewportIndex].lapDigit + '1', 2);
+    drawMenuAsciiCharImpl(vertical ? -48 : 0x70, (s16)y, gRacePlayers[viewportIndex].state.lapDigit + '1', 2);
     // @recomp Position the vertical lap separator and use the exported implementation of the weak ASCII alias.
     drawMenuAsciiCharImpl(vertical ? -40 : 0x78, (s16)y, '/', 2);
     // @recomp Position the vertical total lap digit and use the exported implementation of the weak ASCII alias.

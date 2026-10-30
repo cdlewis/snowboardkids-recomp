@@ -16,8 +16,6 @@ extern u16 gLastSchedulerRetraceCounter;
 extern OSMesgQueue gFramebufferRenderDoneQueue;
 extern SchedulerState gSchedulerState;
 
-extern u8 D_369000[];
-
 extern void selectMenuRenderScratchBuffer(s32 frameIndex);
 extern void appendViewportDisplayLists(u8 frameIndex);
 
@@ -44,7 +42,7 @@ RECOMP_PATCH void submitFramebufferRenderTask(u8 frameIndex) {
                          G_ZBUFFER | G_SHADE | G_CULL_BOTH | G_FOG | G_LIGHTING | G_SHADING_SMOOTH);
     gSPClipRatio(gRegionAllocPtr++, FRUSTRATIO_1);
     gDPPipelineMode(gRegionAllocPtr++, G_PM_NPRIMITIVE);
-    gDPSetTextureImage(gRegionAllocPtr++, G_IM_FMT_RGBA, G_IM_SIZ_16b, 320, D_369000);
+    gDPSetTextureImage(gRegionAllocPtr++, G_IM_FMT_RGBA, G_IM_SIZ_16b, 320, gDepthBufferPhysicalAddress);
 
     if (gClearFramebufferOnNextTask != 0) {
         gClearFramebufferOnNextTask = 0;

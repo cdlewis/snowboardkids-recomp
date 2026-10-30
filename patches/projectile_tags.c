@@ -1,8 +1,8 @@
 #include "patches.h"
 
 #include "transform_ids.h"
-#include "game/race/items/race_item_projectiles.h"
-#include "game/race/items/race_item_effects.h"
+#include "game/race/items/race_projectiles.h"
+#include "game/race/effects/race_visual_effects.h"
 #include "game/race/ui/race_ui_effects.h"
 #include "game/race/course/race_course_effects.h"
 #include "game/menu/renderer/menu_render_utils.h"
@@ -11,7 +11,7 @@
 #include "game/math/fixed_point_math.h"
 #include "game/race/camera/race_camera.h"
 
-RECOMP_PATCH void renderWideHomingItemProjectile(RaceItemProjectileActor *arg0) {
+RECOMP_PATCH void renderWideHomingShotProjectile(RaceItemProjectileActor *arg0) {
     RaceEffectMatrixScratch sp6C;
     volatile u8 padding[8];
     Gfx *temp_v0_2;
@@ -134,7 +134,7 @@ RECOMP_PATCH void renderWideHomingItemProjectile(RaceItemProjectileActor *arg0) 
     }
 }
 
-RECOMP_PATCH void renderCloseRangeHomingItemProjectile(RaceItemProjectileActor *arg0) {
+RECOMP_PATCH void renderCloseRangeHomingShotProjectile(RaceItemProjectileActor *arg0) {
     RaceEffectMatrixScratch sp64;
     volatile u8 padding[8];
     Gfx *temp_v0_2;
@@ -257,7 +257,7 @@ RECOMP_PATCH void renderCloseRangeHomingItemProjectile(RaceItemProjectileActor *
     }
 }
 
-RECOMP_PATCH void renderBouncingItemProjectile(RaceItemProjectileActor *arg0) {
+RECOMP_PATCH void renderBouncingShotProjectile(RaceItemProjectileActor *arg0) {
     RaceEffectMatrixScratch sp64;
     Gfx *temp_v0_2;
     Gfx *temp_v0_3;
@@ -501,7 +501,7 @@ RECOMP_PATCH void renderThrownTrailImpactProjectile(RaceItemProjectileActor *arg
     }
 }
 
-RECOMP_PATCH void renderAreaBlastItemProjectile(RaceItemProjectileActor *arg0) {
+RECOMP_PATCH void renderAreaBlastShotProjectile(RaceItemProjectileActor *arg0) {
     RaceEffectMatrixScratch sp64;
     Gfx *temp_v0_2;
     Gfx *temp_v0_3;
@@ -623,7 +623,7 @@ RECOMP_PATCH void renderAreaBlastItemProjectile(RaceItemProjectileActor *arg0) {
     }
 }
 
-RECOMP_PATCH void renderLongRangeHomingItemProjectile(RaceItemProjectileActor *arg0) {
+RECOMP_PATCH void renderLongRangeHomingShotProjectile(RaceItemProjectileActor *arg0) {
     RaceEffectMatrixScratch sp64;
     Gfx *temp_v0_2;
     Gfx *temp_v0_3;
@@ -745,7 +745,7 @@ RECOMP_PATCH void renderLongRangeHomingItemProjectile(RaceItemProjectileActor *a
     }
 }
 
-RECOMP_PATCH void renderFallingActionProjectile(RaceItemProjectileActor *arg0) {
+RECOMP_PATCH void renderRockItem(RaceItemProjectileActor *arg0) {
     RaceEffectMatrixScratch sp64;
     Gfx *temp_v0_2;
     Gfx *temp_v0_3;
@@ -853,7 +853,7 @@ RECOMP_PATCH void renderFallingActionProjectile(RaceItemProjectileActor *arg0) {
                 }; \
                 temp_v0_17 = gRegionAllocPtr++; \
                 temp_v0_17->words.w0 = 0x0400103F; \
-                temp_v0_17->words.w1 = (u32)gFallingActionProjectileQuadVertices; \
+                temp_v0_17->words.w1 = (u32)gRockItemQuadVertices; \
                 temp_v0_18 = gRegionAllocPtr++; \
                 temp_v0_18->words.w0 = 0xB1060402; \
                 temp_v0_18->words.w1 = 0x00060200; \
@@ -1106,7 +1106,7 @@ RECOMP_PATCH void renderRaceUiProjectile(RaceUiProjectileActor *arg0) {
             temp_v0_18->words.w1 = (u32)gViewportMatrix; \
             temp_v0_2 = gRegionAllocPtr++; \
             temp_v0_2->words.w0 = 0x0400103F; \
-            temp_v0_2->words.w1 = (u32)(&D_800D64A0[sp74]); \
+            temp_v0_2->words.w1 = (u32)(&gRaceUiProjectileVertices[sp74]); \
             temp_v0_3 = gRegionAllocPtr++; \
             temp_v0_3->words.w0 = 0xB1060402; \
             temp_v0_3->words.w1 = 0x00060200; \

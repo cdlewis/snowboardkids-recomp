@@ -734,7 +734,7 @@ RECOMP_PATCH void drawAssetTableSpriteWithDefaultPalette(s16 x, s16 y, AssetTabl
         G_TX_NOLOD,
         G_TX_NOLOD
     );
-    gDPLoadTLUT_pal16(gRegionAllocPtr++, 0, D_800D40B0);
+    gDPLoadTLUT_pal16(gRegionAllocPtr++, 0, gMenuDefaultSpritePalette);
     gSPTextureRectangle(
         gRegionAllocPtr++,
         x0 << 2,

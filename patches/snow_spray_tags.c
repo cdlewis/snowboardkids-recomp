@@ -3,7 +3,7 @@
 #include "transform_ids.h"
 #include "camera_interpolation.h"
 #include "player_interpolation.h"
-#include "game/race/items/race_item_effects.h"
+#include "game/race/effects/race_visual_effects.h"
 #include "game/race/ui/race_ui_effects.h"
 #include "game/race/course/race_course_effects.h"
 #include "game/race/camera/race_camera.h"
@@ -190,20 +190,20 @@ RECOMP_PATCH void initRacePlayerYellowTrickSparkles(RaceItemFollowActor *arg0) {
     assignSnowSpraySpawnId(arg0);
     arg0->timer = -1;
     player = &gRacePlayers[arg0->task.userId];
-    if (player->stateFlags & 0x400) {
-        arg0->offset1.x = player->groundMarkerSources[0].x - player->unk28.x;
-        arg0->offset1.y = player->groundMarkerSources[0].y - player->unk28.y;
-        arg0->offset1.z = player->groundMarkerSources[0].z - player->unk28.z;
-        arg0->offset2.x = player->groundMarkerSources[2].x - player->unk28.x;
-        arg0->offset2.y = player->groundMarkerSources[2].y - player->unk28.y;
-        arg0->offset2.z = player->groundMarkerSources[2].z - player->unk28.z;
+    if (player->state.stateFlags & 0x400) {
+        arg0->offset1.x = player->state.boardContactPoints[0].x - player->state.renderPosition.x;
+        arg0->offset1.y = player->state.boardContactPoints[0].y - player->state.renderPosition.y;
+        arg0->offset1.z = player->state.boardContactPoints[0].z - player->state.renderPosition.z;
+        arg0->offset2.x = player->state.boardContactPoints[2].x - player->state.renderPosition.x;
+        arg0->offset2.y = player->state.boardContactPoints[2].y - player->state.renderPosition.y;
+        arg0->offset2.z = player->state.boardContactPoints[2].z - player->state.renderPosition.z;
     } else {
-        arg0->offset1.x = player->groundMarkerSources[1].x - player->unk28.x;
-        arg0->offset1.y = player->groundMarkerSources[1].y - player->unk28.y;
-        arg0->offset1.z = player->groundMarkerSources[1].z - player->unk28.z;
-        arg0->offset2.x = player->groundMarkerSources[3].x - player->unk28.x;
-        arg0->offset2.y = player->groundMarkerSources[3].y - player->unk28.y;
-        arg0->offset2.z = player->groundMarkerSources[3].z - player->unk28.z;
+        arg0->offset1.x = player->state.boardContactPoints[1].x - player->state.renderPosition.x;
+        arg0->offset1.y = player->state.boardContactPoints[1].y - player->state.renderPosition.y;
+        arg0->offset1.z = player->state.boardContactPoints[1].z - player->state.renderPosition.z;
+        arg0->offset2.x = player->state.boardContactPoints[3].x - player->state.renderPosition.x;
+        arg0->offset2.y = player->state.boardContactPoints[3].y - player->state.renderPosition.y;
+        arg0->offset2.z = player->state.boardContactPoints[3].z - player->state.renderPosition.z;
     }
     updateRacePlayerYellowTrickSparkles(arg0);
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRacePlayerYellowTrickSparkles);
@@ -216,20 +216,20 @@ RECOMP_PATCH void initRacePlayerBlueTrickSparkles(RaceItemFollowActor *arg0) {
     assignSnowSpraySpawnId(arg0);
     arg0->timer = -1;
     player = &gRacePlayers[arg0->task.userId];
-    if (player->stateFlags & 0x400) {
-        arg0->offset1.x = player->groundMarkerSources[0].x - player->unk28.x;
-        arg0->offset1.y = player->groundMarkerSources[0].y - player->unk28.y;
-        arg0->offset1.z = player->groundMarkerSources[0].z - player->unk28.z;
-        arg0->offset2.x = player->groundMarkerSources[2].x - player->unk28.x;
-        arg0->offset2.y = player->groundMarkerSources[2].y - player->unk28.y;
-        arg0->offset2.z = player->groundMarkerSources[2].z - player->unk28.z;
+    if (player->state.stateFlags & 0x400) {
+        arg0->offset1.x = player->state.boardContactPoints[0].x - player->state.renderPosition.x;
+        arg0->offset1.y = player->state.boardContactPoints[0].y - player->state.renderPosition.y;
+        arg0->offset1.z = player->state.boardContactPoints[0].z - player->state.renderPosition.z;
+        arg0->offset2.x = player->state.boardContactPoints[2].x - player->state.renderPosition.x;
+        arg0->offset2.y = player->state.boardContactPoints[2].y - player->state.renderPosition.y;
+        arg0->offset2.z = player->state.boardContactPoints[2].z - player->state.renderPosition.z;
     } else {
-        arg0->offset1.x = player->groundMarkerSources[1].x - player->unk28.x;
-        arg0->offset1.y = player->groundMarkerSources[1].y - player->unk28.y;
-        arg0->offset1.z = player->groundMarkerSources[1].z - player->unk28.z;
-        arg0->offset2.x = player->groundMarkerSources[3].x - player->unk28.x;
-        arg0->offset2.y = player->groundMarkerSources[3].y - player->unk28.y;
-        arg0->offset2.z = player->groundMarkerSources[3].z - player->unk28.z;
+        arg0->offset1.x = player->state.boardContactPoints[1].x - player->state.renderPosition.x;
+        arg0->offset1.y = player->state.boardContactPoints[1].y - player->state.renderPosition.y;
+        arg0->offset1.z = player->state.boardContactPoints[1].z - player->state.renderPosition.z;
+        arg0->offset2.x = player->state.boardContactPoints[3].x - player->state.renderPosition.x;
+        arg0->offset2.y = player->state.boardContactPoints[3].y - player->state.renderPosition.y;
+        arg0->offset2.z = player->state.boardContactPoints[3].z - player->state.renderPosition.z;
     }
     updateRacePlayerBlueTrickSparkles(arg0);
     setCallbackTaskCallback(arg0, (CallbackTaskCallback)updateRacePlayerBlueTrickSparkles);

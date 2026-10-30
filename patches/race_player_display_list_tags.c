@@ -105,48 +105,48 @@ RECOMP_PATCH void drawRacePlayerGroundShadow(RacePlayer *player) {
     s32 i;
 
     if (gRenderMatricesDirty != 0) {
-        player->stateFlags &= ~RACE_PLAYER_MODEL_RENDERER_FLAG_SHADOW_READY;
-        player->shadowVtx = allocMenuRenderScratch(0x40);
-        if (player->shadowVtx == NULL) {
+        player->state.stateFlags &= ~RACE_PLAYER_MODEL_RENDERER_FLAG_SHADOW_READY;
+        player->state.shadowVtx = allocMenuRenderScratch(0x40);
+        if (player->state.shadowVtx == NULL) {
             return;
         }
 
         for (i = 0; i < RACE_PLAYER_SHADOW_VERTEX_COUNT; i++) {
-            player->shadowVtx[i].v.ob[0] = (player->markerPoints[i].x - player->markerPoints[0].x) >> 14;
-            player->shadowVtx[i].v.ob[1] = (player->markerPoints[i].y - player->markerPoints[0].y) >> 14;
-            player->shadowVtx[i].v.ob[2] = (player->markerPoints[i].z - player->markerPoints[0].z) >> 14;
-            player->shadowVtx[i].v.flag = 0;
-            player->shadowVtx[i].v.cn[0] = 0;
-            player->shadowVtx[i].v.cn[1] = 0;
-            player->shadowVtx[i].v.cn[2] = 0;
-            player->shadowVtx[i].v.cn[3] = 0x30;
+            player->state.shadowVtx[i].v.ob[0] = (player->state.shadowCorners[i].x - player->state.shadowCorners[0].x) >> 14;
+            player->state.shadowVtx[i].v.ob[1] = (player->state.shadowCorners[i].y - player->state.shadowCorners[0].y) >> 14;
+            player->state.shadowVtx[i].v.ob[2] = (player->state.shadowCorners[i].z - player->state.shadowCorners[0].z) >> 14;
+            player->state.shadowVtx[i].v.flag = 0;
+            player->state.shadowVtx[i].v.cn[0] = 0;
+            player->state.shadowVtx[i].v.cn[1] = 0;
+            player->state.shadowVtx[i].v.cn[2] = 0;
+            player->state.shadowVtx[i].v.cn[3] = 0x30;
         }
 
-        player->shadowMtx = allocMenuRenderScratch(0x100);
-        if (player->shadowMtx == NULL) {
+        player->state.shadowMtx = allocMenuRenderScratch(0x100);
+        if (player->state.shadowMtx == NULL) {
             return;
         }
 
-        *player->shadowMtx = gRacePlayerShadowMatrixTemplate;
+        *player->state.shadowMtx = gRacePlayerShadowMatrixTemplate;
 
-        player->shadowMtx->m[1][2] =
-            (player->markerPoints[0].x & 0xFFFF0000) | (((player->markerPoints[0].y + 0xA000) >> 16) & 0xFFFF);
-        player->shadowMtx->m[1][3] = (player->markerPoints[0].z & 0xFFFF0000) | 1;
-        player->shadowMtx->m[3][2] =
-            ((player->markerPoints[0].x << 16) & 0xFFFF0000) | ((player->markerPoints[0].y + 0xA000) & 0xFFFF);
-        player->shadowMtx->m[3][3] = (player->markerPoints[0].z << 16) & 0xFFFF0000;
-        player->stateFlags |= RACE_PLAYER_MODEL_RENDERER_FLAG_SHADOW_READY;
+        player->state.shadowMtx->m[1][2] =
+            (player->state.shadowCorners[0].x & 0xFFFF0000) | (((player->state.shadowCorners[0].y + 0xA000) >> 16) & 0xFFFF);
+        player->state.shadowMtx->m[1][3] = (player->state.shadowCorners[0].z & 0xFFFF0000) | 1;
+        player->state.shadowMtx->m[3][2] =
+            ((player->state.shadowCorners[0].x << 16) & 0xFFFF0000) | ((player->state.shadowCorners[0].y + 0xA000) & 0xFFFF);
+        player->state.shadowMtx->m[3][3] = (player->state.shadowCorners[0].z << 16) & 0xFFFF0000;
+        player->state.stateFlags |= RACE_PLAYER_MODEL_RENDERER_FLAG_SHADOW_READY;
     }
 
-    if (isPositionNearCurrentRaceViewportCamera(player->markerPoints) != 0 &&
-        (player->stateFlags & RACE_PLAYER_MODEL_RENDERER_FLAG_SHADOW_READY) != 0) {
+    if (isPositionNearCurrentRaceViewportCamera(player->state.shadowCorners) != 0 &&
+        (player->state.stateFlags & RACE_PLAYER_MODEL_RENDERER_FLAG_SHADOW_READY) != 0) {
         gSPDisplayList(gRegionAllocPtr++, gRacePlayerShadowRenderSetupDisplayList);
 
         // @recomp Give the shadow a stable matrix identity across interpolated frames.
         pushRacePlayerShadowMatrixGroup(player->playerIndex);
 
-        gSPMatrix(gRegionAllocPtr++, player->shadowMtx, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
-        gSPVertex(gRegionAllocPtr++, player->shadowVtx, RACE_PLAYER_SHADOW_VERTEX_COUNT, 0);
+        gSPMatrix(gRegionAllocPtr++, player->state.shadowMtx, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
+        gSPVertex(gRegionAllocPtr++, player->state.shadowVtx, RACE_PLAYER_SHADOW_VERTEX_COUNT, 0);
         gSP1Quadrangle(gRegionAllocPtr++, 1, 3, 2, 0, 0);
         gSP1Quadrangle(gRegionAllocPtr++, 2, 3, 1, 0, 0);
 
@@ -164,26 +164,26 @@ RECOMP_PATCH void drawRacePlayerModel(RacePlayer *player) {
 
     countPlayer = player;
     if (gRenderMatricesDirty != 0) {
-        player->stateFlags |= RACE_PLAYER_MODEL_RENDERER_FLAG_MODEL_MATRICES_READY;
+        player->state.stateFlags |= RACE_PLAYER_MODEL_RENDERER_FLAG_MODEL_MATRICES_READY;
         i = 0;
-        if (player->modelPartCount > 0) {
+        if (player->state.modelPartCount > 0) {
             partMatrixPlayer = player;
-            partSource = player->modelPartTransforms;
+            partSource = player->state.modelPartTransforms;
             do {
-                partMatrixPlayer->modelPartMatrices[0] = allocFixedTransformMatrix(partSource);
-                if (partMatrixPlayer->modelPartMatrices[0] == NULL) {
-                    player->stateFlags &= ~RACE_PLAYER_MODEL_RENDERER_FLAG_MODEL_MATRICES_READY;
+                partMatrixPlayer->state.modelPartMatrices[0] = allocFixedTransformMatrix(partSource);
+                if (partMatrixPlayer->state.modelPartMatrices[0] == NULL) {
+                    player->state.stateFlags &= ~RACE_PLAYER_MODEL_RENDERER_FLAG_MODEL_MATRICES_READY;
                 }
                 i++;
                 // Advance one matrix slot while retaining the source's matching induction-variable shape.
                 partMatrixPlayer = (RacePlayer *)((Mtx **)partMatrixPlayer + 1);
                 partSource++;
-            } while (i < countPlayer->modelPartCount);
+            } while (i < countPlayer->state.modelPartCount);
         }
     }
 
     drawPlayer = player;
-    if ((drawPlayer->stateFlags & RACE_PLAYER_MODEL_RENDERER_FLAG_MODEL_MATRICES_READY) == 0) {
+    if ((drawPlayer->state.stateFlags & RACE_PLAYER_MODEL_RENDERER_FLAG_MODEL_MATRICES_READY) == 0) {
         return;
     }
 
@@ -191,16 +191,16 @@ RECOMP_PATCH void drawRacePlayerModel(RacePlayer *player) {
     pushRacePlayerBoneMatrixGroup(drawPlayer->playerIndex, RACE_PLAYER_BONE_ID_BOARD);
 
     drawSnowboardModel(
-        drawPlayer->modelPartMatrices[0],
-        drawPlayer->characterVariant,
+        drawPlayer->state.modelPartMatrices[0],
+        drawPlayer->snowboardIndex,
         drawPlayer->snowboardTextureIndex
     );
 
     // @recomp End the snowboard's matrix group after drawing it.
     popRacePlayerMatrixGroup();
 
-    if (drawPlayer->actionSoundTimer != 0) {
-        if (drawPlayer->actionSoundTimer < 0xA5 && drawPlayer->actionSoundTimer >= 0x10) {
+    if (drawPlayer->state.invisibilityTimer != 0) {
+        if (drawPlayer->state.invisibilityTimer < 0xA5 && drawPlayer->state.invisibilityTimer >= 0x10) {
             return;
         }
         if ((gUiBlinkTimer & 1) != 0) {
@@ -208,7 +208,7 @@ RECOMP_PATCH void drawRacePlayerModel(RacePlayer *player) {
         }
     }
 
-    if ((drawPlayer->stateFlags & RACE_PLAYER_MODEL_RENDERER_FLAG_HIDE_MESHES) == 0) {
+    if ((drawPlayer->state.stateFlags & RACE_PLAYER_MODEL_RENDERER_FLAG_HIDE_MESHES) == 0) {
         gDPPipeSync(gRegionAllocPtr++);
         gSPSegment(gRegionAllocPtr++, 2, getRelocatableHeapBlockBase(gAssetHandles[drawPlayer->playerIndex + 0xE]));
         gSPSegment(gRegionAllocPtr++, 3, getRelocatableHeapBlockBase(gAssetHandles[drawPlayer->playerIndex + 0x12]));
@@ -218,7 +218,7 @@ RECOMP_PATCH void drawRacePlayerModel(RacePlayer *player) {
             pushRacePlayerBoneMatrixGroup(drawPlayer->playerIndex, i + 1);
             gSPMatrix(
                 gRegionAllocPtr++,
-                drawPlayer->modelPartMatrices[i + 1],
+                drawPlayer->state.modelPartMatrices[i + 1],
                 G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW
             );
             gSPDisplayList(
@@ -241,27 +241,27 @@ RECOMP_PATCH void drawRaceGhostPlayerModel(RacePlayer *player) {
 
     countPlayer = player;
     if (gRenderMatricesDirty != 0) {
-        player->stateFlags |= RACE_PLAYER_MODEL_RENDERER_FLAG_MODEL_MATRICES_READY;
+        player->state.stateFlags |= RACE_PLAYER_MODEL_RENDERER_FLAG_MODEL_MATRICES_READY;
         i = 0;
-        if (player->modelPartCount > 0) {
+        if (player->state.modelPartCount > 0) {
             partMatrixPlayer = player;
-            partSource = player->modelPartTransforms;
+            partSource = player->state.modelPartTransforms;
             do {
                 // Folded away by IDO, but preserves the target's saved-register allocation.
                 if ((partMatrixPlayer && partMatrixPlayer) && partMatrixPlayer) {}
-                partMatrixPlayer->modelPartMatrices[0] = allocFixedTransformMatrix(partSource);
-                if (partMatrixPlayer->modelPartMatrices[0] == NULL) {
-                    player->stateFlags &= ~RACE_PLAYER_MODEL_RENDERER_FLAG_MODEL_MATRICES_READY;
+                partMatrixPlayer->state.modelPartMatrices[0] = allocFixedTransformMatrix(partSource);
+                if (partMatrixPlayer->state.modelPartMatrices[0] == NULL) {
+                    player->state.stateFlags &= ~RACE_PLAYER_MODEL_RENDERER_FLAG_MODEL_MATRICES_READY;
                 }
                 i++;
                 // Advance one matrix slot while retaining the source's matching induction-variable shape.
                 partMatrixPlayer = (RacePlayer *)((Mtx **)partMatrixPlayer + 1);
                 partSource++;
-            } while (i < countPlayer->modelPartCount);
+            } while (i < countPlayer->state.modelPartCount);
         }
     }
 
-    if ((player->stateFlags & RACE_PLAYER_MODEL_RENDERER_FLAG_MODEL_MATRICES_READY) == 0) {
+    if ((player->state.stateFlags & RACE_PLAYER_MODEL_RENDERER_FLAG_MODEL_MATRICES_READY) == 0) {
         return;
     }
 
@@ -274,11 +274,11 @@ RECOMP_PATCH void drawRaceGhostPlayerModel(RacePlayer *player) {
 
     // @recomp Give the ghost's snowboard a unique ID
     pushRacePlayerBoneMatrixGroup(player->playerIndex, RACE_PLAYER_BONE_ID_BOARD);
-    drawGhostSnowboardModel(player->modelPartMatrices[0], player->characterVariant, player->snowboardTextureIndex);
+    drawGhostSnowboardModel(player->state.modelPartMatrices[0], player->snowboardIndex, player->snowboardTextureIndex);
     // @recomp End the unique ID
     popRacePlayerMatrixGroup();
 
-    if ((player->stateFlags & RACE_PLAYER_MODEL_RENDERER_FLAG_HIDE_MESHES) == 0) {
+    if ((player->state.stateFlags & RACE_PLAYER_MODEL_RENDERER_FLAG_HIDE_MESHES) == 0) {
         gDPPipeSync(gRegionAllocPtr++);
         gSPSegment(gRegionAllocPtr++, 2, getRelocatableHeapBlockBase(gAssetHandles[player->playerIndex + 0xE]));
         segmentGfx = gRegionAllocPtr++;
@@ -288,7 +288,7 @@ RECOMP_PATCH void drawRaceGhostPlayerModel(RacePlayer *player) {
             pushRacePlayerBoneMatrixGroup(player->playerIndex, i + 1);
             gSPMatrix(
                 gRegionAllocPtr++,
-                player->modelPartMatrices[i + 1],
+                player->state.modelPartMatrices[i + 1],
                 G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW
             );
             gSPDisplayList(gRegionAllocPtr++, gRaceGhostPlayerModelPartDisplayLists[i][player->characterId]);
@@ -304,7 +304,7 @@ extern u32 gSpeedFanBackDisplayList[];
 RECOMP_PATCH void renderSpeedFanEffect(SpeedFanState *trail) {
     Gfx *unused;
     // @recomp Extract player from fan actor for viewport and replay IDs.
-    RacePlayer *player = (RacePlayer *)((u8 *)trail - __builtin_offsetof(RacePlayer, speedFan));
+    RacePlayer *player = (RacePlayer *)((u8 *)trail - __builtin_offsetof(RacePlayer, state.speedFan));
 
     if (gRenderMatricesDirty != 0) {
         trail->matricesDirty = 1;

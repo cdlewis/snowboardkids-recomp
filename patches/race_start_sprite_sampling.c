@@ -6,7 +6,6 @@
 #include "game/race/ui/race_ui_effects.h"
 
 extern Gfx gAlphaSpriteRenderModeDl[];
-extern Vtx D_800D69A8[];
 
 RECOMP_PATCH void renderRaceStartOverlay(RaceUiOverlayActor *arg0) {
     volatile u8 pad[0xC];
@@ -32,7 +31,7 @@ RECOMP_PATCH void renderRaceStartOverlay(RaceUiOverlayActor *arg0) {
         gDPLoadTLUT_pal16(gRegionAllocPtr++, 0, arg0->panelAPalette);
         gSPMatrix(gRegionAllocPtr++, arg0->matrix, G_MTX_NOPUSH | G_MTX_LOAD | G_MTX_MODELVIEW);
         gSPMatrix(gRegionAllocPtr++, gViewportMatrix, G_MTX_NOPUSH | G_MTX_MUL | G_MTX_MODELVIEW);
-        gSPVertex(gRegionAllocPtr++, D_800D69A8, 8, 0);
+        gSPVertex(gRegionAllocPtr++, gRaceStartOverlayVertices, 8, 0);
         gSP1Quadrangle(gRegionAllocPtr++, 3, 2, 1, 0, 0);
         // @recomp Exclude the spare texel row/column
         gDPLoadTextureTile_4b(gRegionAllocPtr++, arg0->panelBImage, G_IM_FMT_CI,

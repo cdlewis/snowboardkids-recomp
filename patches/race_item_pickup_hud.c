@@ -3,7 +3,7 @@
 #include "game/engine/asset_manager.h"
 #include "game/engine/relocatable_heap.h"
 #include "game/menu/renderer/menu_render_utils.h"
-#include "game/race/items/race_item_effects.h"
+#include "game/race/effects/race_visual_effects.h"
 
 #define ASSET_HANDLE(index) (gAssetHandles[(index)])
 

@@ -48,9 +48,9 @@ RECOMP_PATCH void drawMultiplayerRaceHud(void *arg0) {
         0x20,
         -0x38,
         texture,
-        gRaceHudItemEffectTileOffsets[gRacePlayers[gCurrentViewportIndex].itemEffectType] +
-            gRacePlayers[gCurrentViewportIndex].itemEffectCount - 1,
-        player->itemEffectPalette + 1
+        gRaceHudShotTileOffsets[gRacePlayers[gCurrentViewportIndex].state.shotType] +
+            gRacePlayers[gCurrentViewportIndex].state.shotCount - 1,
+        player->state.shotPalette + 1
     );
 
     texture = getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE);
@@ -59,15 +59,15 @@ RECOMP_PATCH void drawMultiplayerRaceHud(void *arg0) {
         0x30,
         -0x38,
         texture,
-        gRaceHudActionEffectTileIds[player->actionEffectType],
-        player->actionEffectPalette + 1
+        gRaceHudItemTileIds[player->state.itemType],
+        player->state.itemPalette + 1
     );
 
     texture = getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE);
     anchorGridHudGroup(-1);
     // Half-size 32px sprites are recentered by +8px by the original sprite helper.
     // Account for that inset when anchoring the visible rank and item rectangles.
-    drawScaledAssetTableSprite(-0x50, 0x18, texture, gRacePlayers[gCurrentViewportIndex].rankIndex, 1);
+    drawScaledAssetTableSprite(-0x50, 0x18, texture, gRacePlayers[gCurrentViewportIndex].state.rankIndex, 1);
 
     drawAssetTableSprite(-0x48, -0x30, getRelocatableHeapBlockBase(RACE_HUD_POPUP_FONT_HANDLE), 0x1A);
     anchorGridHudGroup(0);
@@ -79,8 +79,8 @@ RECOMP_PATCH void drawMultiplayerScoreAndLapCounter(void *arg0) {
     char buffer[0x20];
 
     anchorGridHudGroup(1);
-    _Sprintf(buffer, gRaceHudMultiplayerScoreFormat, gRacePlayers[gCurrentViewportIndex].score);
-    if (gRacePlayers[gCurrentViewportIndex].score < 0x64) {
+    _Sprintf(buffer, gRaceHudMultiplayerScoreFormat, gRacePlayers[gCurrentViewportIndex].state.score);
+    if (gRacePlayers[gCurrentViewportIndex].state.score < 0x64) {
         palette = 1;
     } else {
         palette = 2;
@@ -90,7 +90,7 @@ RECOMP_PATCH void drawMultiplayerScoreAndLapCounter(void *arg0) {
     anchorGridHudGroup(-1);
     x = -0x30;
 
-    drawMenuAsciiCharImpl((s16)x, -0x30, gRacePlayers[gCurrentViewportIndex].lapDigit + '1', 2);
+    drawMenuAsciiCharImpl((s16)x, -0x30, gRacePlayers[gCurrentViewportIndex].state.lapDigit + '1', 2);
     drawMenuAsciiCharImpl((s16)(x + 8), -0x30, 0x2F, 2);
     drawMenuAsciiCharImpl((s16)(x + 0x10), -0x30, gRaceLapCount + 0x30, 2);
     anchorGridHudGroup(0);

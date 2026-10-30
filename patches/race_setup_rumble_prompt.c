@@ -87,7 +87,7 @@ RECOMP_PATCH void updateControllerPakRumbleCheckPrompt(ControllerPakRumbleCheckP
             break;
     }
 
-    gControllerPakRumbleCheckPromptState.state = state;
+    gControllerPakRumbleCheckPromptTransition.state = state;
     if (arg0->state == 5) {
         removeCallbackTask(arg0);
         return;
