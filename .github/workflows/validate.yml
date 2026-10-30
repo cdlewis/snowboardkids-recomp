@@ -265,6 +265,7 @@ jobs:
           export CCACHE_DIR=/tmp/ccache
           git config --global protocol.file.allow always
           make -C patches CC=clang LD=ld.lld
+          make -C patches VERSION=jp CC=clang LD=ld.lld
           flatpak-builder --user --force-clean --install-deps-from=flathub --repo=repo --ccache builddir ./flatpak/${{ env.FLATPAK_ID }}.json
           flatpak build-bundle repo ./${{ env.FLATPAK_ID }}.flatpak ${{ env.FLATPAK_ID }} --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
 

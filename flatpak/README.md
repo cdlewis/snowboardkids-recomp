@@ -1,6 +1,7 @@
 Before building the Flatpak, you must build the patches on the root directory first. **The LLVM Extension for freedesktop does not include the MIPS compiler and will fail to build the patches inside the flatpak**.
 ```sh
 make -C patches CC=clang LD=ld.lld
+make -C patches VERSION=jp CC=clang LD=ld.lld
 ```
 
 Build
