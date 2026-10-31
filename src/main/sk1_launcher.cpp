@@ -282,7 +282,8 @@ void choose_rom() {
                 recompui::message_box("Failed to open ROM file.");
                 break;
             case recomp::RomValidationError::NotARom:
-                recompui::message_box("This is not a valid ROM file.");
+                recompui::message_box("This file is not a valid Nintendo 64 ROM. Select an extracted "
+                                      ".z64, .n64, or .v64 file.");
                 break;
             case recomp::RomValidationError::IncorrectRom:
                 recompui::message_box("This ROM is not the correct game.");
