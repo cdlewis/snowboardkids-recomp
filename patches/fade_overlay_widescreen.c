@@ -630,8 +630,15 @@ RECOMP_PATCH void appendViewportDisplayLists(u8 frameIndex) {
         }
     }
 
+    // @recomp Preserve each region's foreground menu bounds. JP derives the
+    // sliding preview clips from these dimensions instead of using US constants.
+#if defined(VERSION_JP)
+    gMenuViewportWidth = 320;
+    gMenuViewportHeight = 240;
+#else
     gMenuViewportWidth = 288;
     gMenuViewportHeight = 208;
+#endif
     gMenuViewportCenterX = 160;
     gMenuViewportCenterY = 120;
 
